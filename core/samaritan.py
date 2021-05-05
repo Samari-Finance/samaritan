@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from telegram.ext import Updater, CommandHandler
+from telegram.ext import Updater, CommandHandler, CallbackContext
 from core.commands import commands
 
 
@@ -13,8 +13,9 @@ class Samaritan:
         self.setup(log_level=log_level)
         self.updater = Updater(token=self._read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
-        self.list_timer = datetime.now() - timedelta(minutes=2)
-        self.init_commands()
+        self.list_timer = datetime.now() - timedelta(minutes=10)
+        self.add_handles()
+        self.msg = None
 
     def start(self, update, context):
         self.send_message(update, context, text=commands['start'])
@@ -31,11 +32,14 @@ class Samaritan:
     def mc(self, update, context):
         self.send_message(update, context, commands['mc'])
 
-    def shill_list(self, update, context):
+    def shill_list(self, update, context: CallbackContext):
         now = datetime.now()
-        if self.list_timer + timedelta(minutes=2) <= now:
-            self.send_message(update, context, commands['shillist'])
+        if self.list_timer + timedelta(minutes=10) <= now:
+            self.msg = self.send_message(update, context, commands['shillist'])
             self.list_timer = now
+        else:
+            too_f = commands['too_fast']+str(self.msg.message_id.real)+")"
+            self.send_message_markdown(update, context, f"{too_f}")
 
     def shillin(self, update, context):
         self.send_message(update, context, commands['shillin'])
@@ -50,13 +54,17 @@ class Samaritan:
         self.send_message(update, context, commands['shilltwitter'])
 
     @staticmethod
-    def send_message(update, context, text: str):
-        context.bot.send_message(chat_id=update.message.chat_id, text=text)
+    def send_message(update, context: CallbackContext, text: str):
+        return context.bot.send_message(chat_id=update.message.chat_id, text=text)
+
+    @staticmethod
+    def send_message_markdown(update, context: CallbackContext, text: str):
+        return context.bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='MarkdownV2')
 
     def start_polling(self):
         self.updater.start_polling()
 
-    def init_commands(self):
+    def add_handles(self):
         self.dispatcher.add_handler(CommandHandler('chart', self.chart))
         self.dispatcher.add_handler(CommandHandler('start', self.start))
         self.dispatcher.add_handler(CommandHandler('commands', self.start))
