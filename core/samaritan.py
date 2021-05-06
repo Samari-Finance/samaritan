@@ -1,6 +1,8 @@
 import logging
 import os
 from datetime import datetime, timedelta
+
+from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from core.commands import commands
 
@@ -15,7 +17,7 @@ class Samaritan:
         self.dispatcher = self.updater.dispatcher
         self.list_timer = datetime.now() - timedelta(minutes=10)
         self.add_handles()
-        self.msg = None
+        self.shillist_msg = None
 
     def start(self, update, context):
         self.send_message(update, context, text=commands['start'])
@@ -32,14 +34,18 @@ class Samaritan:
     def mc(self, update, context):
         self.send_message(update, context, commands['mc'])
 
-    def shill_list(self, update, context: CallbackContext):
+    def shill_list(self, update: Update, context: CallbackContext):
         now = datetime.now()
         if self.list_timer + timedelta(minutes=10) <= now:
-            self.msg = self.send_message(update, context, commands['shillist'])
+            self.shillist_msg = self.send_message(update, context, commands['shillist'])
             self.list_timer = now
         else:
-            too_f = commands['too_fast']+str(self.msg.message_id.real)+")"
-            self.send_message_markdown(update, context, f"{too_f}")
+            self.send_message_markdown(
+                update, context, text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
+
+    @staticmethod
+    def _prettify_reference(update: Update, command, prev_msg):
+        return f"{commands[command]}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
 
     def shillin(self, update, context):
         self.send_message(update, context, commands['shillin'])
@@ -78,6 +84,11 @@ class Samaritan:
         self.dispatcher.add_handler(CommandHandler('shilltwitter', self.shill_reddit))
         self.dispatcher.add_handler(CommandHandler('shilltelegram', self.shill_telegram))
         self.dispatcher.add_handler(CommandHandler('shilltg', self.shill_telegram))
+
+
+    @staticmethod
+    def _format_link(prefix, chat_id, msg_id):
+        return f"{prefix}/{chat_id}/{msg_id})"
 
     @staticmethod
     def setup(log_level):
