@@ -174,9 +174,8 @@ shillist = '\n@uniswaptalk'\
         '\n@uniswapgemtargets'\
         '\n@de_fi'\
         '\n@deficrew'
-
 commands = {
-    "start": 'Heya, I\'m your local Samaritan ❤️ Available commands:\n'
+    "start": '(still in development)\nHeya, I\'m your local Samaritan ❤️ Available commands:\n'
              '\nGeneral:\n'
              '/commands - list of all commands\n'
              '/website - Samari.finance\n'
@@ -194,7 +193,7 @@ commands = {
     "price": '$SAMA is currently untracked due to not being launched.',  # todo
     "mc": 'Market cap of $SAMA is untracked due to not being launched',  # todo
     "shillist": shillist,
-    "too_fast": 'Check this [comment](https://t.me/c/1151533763/',
+    "too_fast": 'Check this [message](https://t.me/c',
     "shillin": 'Available versions of shill are available:\n'
                '/shillreddit\n'
                '/shilltelegram or /shilltg\n'
