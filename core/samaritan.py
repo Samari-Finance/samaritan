@@ -19,6 +19,7 @@ class Samaritan:
         self.shillreddit_timer = datetime.now() - timedelta(minutes=10)
         self.add_handles()
         self.shillist_msg = None
+        self.shillreddit_msg = None
         self.check_commands()
 
     def start(self, update, context):
@@ -47,7 +48,7 @@ class Samaritan:
 
     def shill_list(self, update: Update, context: CallbackContext):
         now = datetime.now()
-        if self.list_timer + timedelta(minutes=30) <= now:
+        if self.shillist_timer + timedelta(minutes=30) <= now:
             self.shillist_msg = self.send_message(update, context, commands['shillist'])
             self.shillist_timer = now
         else:
@@ -64,7 +65,7 @@ class Samaritan:
     def shill_reddit(self, update, context):
         now = datetime.now()
         if self.shillreddit_timer + timedelta(minutes=10) <= now:
-            self.shillreddit_timer = self.send_message(update, context, commands['shillreddit'])
+            self.shillreddit_msg = self.send_message(update, context, commands['shillreddit'])
             self.shillreddit_timer = now
         else:
             self.send_message_markdown(
@@ -106,7 +107,6 @@ class Samaritan:
         self.dispatcher.add_handler(CommandHandler('shilltwitter', self.shill_reddit))
         self.dispatcher.add_handler(CommandHandler('shilltelegram', self.shill_telegram))
         self.dispatcher.add_handler(CommandHandler('shilltg', self.shill_telegram))
-
 
     @staticmethod
     def _format_link(prefix, chat_id, msg_id):
