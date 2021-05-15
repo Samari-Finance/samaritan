@@ -15,9 +15,11 @@ class Samaritan:
         self.setup(log_level=log_level)
         self.updater = Updater(token=self._read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
-        self.list_timer = datetime.now() - timedelta(minutes=10)
+        self.shillist_timer = datetime.now() - timedelta(minutes=30)
+        self.shillreddit_timer = datetime.now() - timedelta(minutes=10)
         self.add_handles()
         self.shillist_msg = None
+        self.check_commands()
 
     def start(self, update, context):
         self.send_message(update, context, text=commands['start'])
@@ -28,6 +30,15 @@ class Samaritan:
     def chart(self, update, context):
         self.send_message(update, context, commands['chart'])
 
+    def trade(self, update, context):
+        self.send_message(update, context, commands['trade'])
+
+    def contract(self, update, context):
+        self.send_message(update, context, commands['contract'])
+
+    def socials(self, update, context):
+        self.send_message(update, context, commands['socials'])
+
     def price(self, update, context):
         self.send_message(update, context, commands['price'])
 
@@ -36,9 +47,9 @@ class Samaritan:
 
     def shill_list(self, update: Update, context: CallbackContext):
         now = datetime.now()
-        if self.list_timer + timedelta(minutes=10) <= now:
+        if self.list_timer + timedelta(minutes=30) <= now:
             self.shillist_msg = self.send_message(update, context, commands['shillist'])
-            self.list_timer = now
+            self.shillist_timer = now
         else:
             self.send_message_markdown(
                 update, context, text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
@@ -51,7 +62,14 @@ class Samaritan:
         self.send_message(update, context, commands['shillin'])
 
     def shill_reddit(self, update, context):
-        self.send_message(update, context, commands['shillreddit'])
+        now = datetime.now()
+        if self.shillreddit_timer + timedelta(minutes=10) <= now:
+            self.shillreddit_timer = self.send_message(update, context, commands['shillreddit'])
+            self.shillreddit_timer = now
+        else:
+            self.send_message_markdown(
+                update, context,
+                text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
 
     def shill_telegram(self, update, context):
         self.send_message(update, context, commands['shilltelegram'])
@@ -72,11 +90,15 @@ class Samaritan:
 
     def add_handles(self):
         self.dispatcher.add_handler(CommandHandler('chart', self.chart))
+        self.dispatcher.add_handler(CommandHandler('trade', self.trade))
+        self.dispatcher.add_handler(CommandHandler('buy', self.trade))
         self.dispatcher.add_handler(CommandHandler('start', self.start))
         self.dispatcher.add_handler(CommandHandler('commands', self.start))
         self.dispatcher.add_handler(CommandHandler('price', self.price))
         self.dispatcher.add_handler(CommandHandler('website', self.website))
         self.dispatcher.add_handler(CommandHandler('marketcap', self.mc))
+        self.dispatcher.add_handler(CommandHandler('socials', self.socials))
+        self.dispatcher.add_handler(CommandHandler('contract', self.contract))
         self.dispatcher.add_handler(CommandHandler('shill', self.shillin))
         self.dispatcher.add_handler(CommandHandler('shillin', self.shillin))
         self.dispatcher.add_handler(CommandHandler('shillreddit', self.shill_reddit))
@@ -101,3 +123,8 @@ class Samaritan:
             api_key_file = os.path.dirname(os.getcwd()) + '/' + api_key_file
         key_file = open(api_key_file)
         return key_file.read()
+
+    def check_commands(self):
+        for key in self.dispatcher.handlers.keys():
+            if key not in commands:
+                print(f'Command missing: {key}')
