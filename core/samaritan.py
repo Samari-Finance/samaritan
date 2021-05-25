@@ -94,19 +94,14 @@ class Samaritan:
             print(str(self.invite_links))
         self.send_message(update, context, f'Here is your personal invite link: {link}')
 
-    def member_updated(self, update: Update, context: CallbackContext):
-        if len(update.message.new_chat_members) > 0:
-            self.new_member(update, context, update.message.new_chat_members[0])
-        else:
-            self.left_member(update, context)
-
-    def new_member(self, update: Update, context: CallbackContext, user):
+    def new_member(self, update: Update, context: CallbackContext):
         print('new member')
-        link = update.chat_member.invite_link
+        print(update.chat_member.to_json())
         print(update.to_json())
+        link = update.chat_member.invite_link.invite_link
 
         if link:
-            self.invite_links[hash(link.invite_link)]['referrals'].append(user)
+            self.invite_links[hash(link)]['referrals'].append(update.chat_member.new_chat_member.user.id)
 
     def left_member(self, update: Update, context: CallbackContext):
         print('left member')
@@ -162,7 +157,8 @@ class Samaritan:
         self.dispatcher.add_handler(CommandHandler('shilltg', self.shill_telegram))
         self.dispatcher.add_handler(CommandHandler('contest', self.contest))
         self.dispatcher.add_handler(CommandHandler('leaderboard', self.leaderboard))
-        self.dispatcher.add_handler(TypeHandler(telegram.ChatMemberUpdated, self.member_updated))
+        self.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, self.new_member))
+        self.dispatcher.add_handler(MessageHandler(Filters.status_update.left_chat_member, self.left_member))
 
     @staticmethod
     def _format_link(prefix, chat_id, msg_id):
