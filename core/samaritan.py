@@ -1,29 +1,34 @@
 import json
 import logging
-import os
 from datetime import datetime, timedelta
-
-import telegram
-from telegram import Update, ChatInviteLink
-from telegram.ext import Updater, CommandHandler, CallbackContext, TypeHandler, MessageHandler, Filters
+from telegram import Update, ChatMember
+from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler
 from core.commands import commands
+from core.db.mongo_db import MongoConn
+from utils.utils import read_api, pp_json
+
+KICKED = ChatMember.KICKED
+LEFT = ChatMember.LEFT
+MEMBER = ChatMember.MEMBER
+ADMIN = ChatMember.ADMINISTRATOR
 
 
 class Samaritan:
 
     def __init__(self,
                  api_key_file: str = None,
+                 db_path: str = None,
                  log_level: logging = logging.INFO):
         self.setup(log_level=log_level)
-        self.updater = Updater(token=self._read_api(api_key_file), use_context=True)
+        self.updater = Updater(token=read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
         self.shillist_timer = datetime.now() - timedelta(minutes=30)
         self.shillreddit_timer = datetime.now() - timedelta(minutes=10)
-        self.add_handles()
+        self.add_handles(self.dispatcher)
         self.shillist_msg = None
         self.shillreddit_msg = None
-        self.invite_links = {}
         self.check_commands()
+        self.db = MongoConn(read_api(db_path))
 
     def start(self, update: Update, context: CallbackContext):
         self.send_message(update, context, text=commands['start'])
@@ -83,48 +88,56 @@ class Samaritan:
 
     def contest(self, update: Update, context: CallbackContext):
         user_id = update.effective_user.id
-        invite_link = context.bot.create_chat_invite_link(chat_id=update.effective_chat.id)
-        link = invite_link.invite_link
-        hash_id = hash(link)
-        if hash_id not in self.invite_links:
-            self.invite_links[hash_id] = {
-                'user': user_id,
-                'referrals': list(),
-            }
-            print(str(self.invite_links))
+        chat_id = update.effective_chat.id
+        link = self.db.get_invite_by_user_id(user_id)
+        if not link:
+            link = context.bot.create_chat_invite_link(chat_id).invite_link
+            self.db.insert_invite_link(link=link, user_id=user_id)
+        else:
+            link = link['invite_link']
         self.send_message(update, context, f'Here is your personal invite link: {link}')
+
+    def member_updated(self, update: Update, context: CallbackContext):
+        new_status = update.chat_member.new_chat_member.status
+        old_status = update.chat_member.old_chat_member.status
+        if self.evaluate_membership(new_status, old_status)[1]:
+            print('evaluated left')
+            self.left_member(update, context)
+        elif self.evaluate_membership(new_status, old_status)[0]:
+            print('evaluated joined')
+            self.new_member(update, context)
 
     def new_member(self, update: Update, context: CallbackContext):
         print('new member')
-        print(update.chat_member.to_json())
-        print(update.to_json())
-        link = update.chat_member.invite_link.invite_link
+        pp_json(update.chat_member.to_json())
 
-        if link:
-            self.invite_links[hash(link)]['referrals'].append(update.chat_member.new_chat_member.user.id)
+        if update.chat_member.invite_link:
+            link = update.chat_member.invite_link.invite_link
+            self.db.set_new_ref(link, update.effective_user.id)
 
     def left_member(self, update: Update, context: CallbackContext):
-        print('left member')
-        left_users = update.message.new_chat_members
-
-        for left in left_users:
-            link = left.invite_link
-            hash_id = hash(link)
-
-            if link:
-                for key in self.invite_links:
-                    filter(lambda x: x is hash_id, key['referrals'])
+        self.db.remove_ref(user_id=update.effective_user.id)
 
     def leaderboard(self, update: Update, context: CallbackContext):
-        msg = f'🏆 CONTEST LEADERBOARD 🏆\n'
-        for key in self.invite_links:
-            lst = key['referrals']
-            length = len(lst)
-            msg += f'{key}: {length}\n'
+        msg = f'🏆 INVITE CONTEST LEADERBOARD 🏆\n'
+        counter = 1
+        scoreboard = sorted(self.db.get_members_pts(), key=lambda i: i['pts'])
 
-        print(self.invite_links)
+        for member in scoreboard:
+            msg += f'{counter}. {update.effective_chat.get_member(member["id"]).user.name} with {member["pts"]} pts\n'
         self.send_message(update, context, msg)
 
+    @staticmethod
+    def evaluate_membership(new, old):
+        just_joined = False
+        just_left = False
+
+        if (old == KICKED or old == LEFT) and new == MEMBER:
+            just_joined = True
+        elif (old == MEMBER) and (new == LEFT or new == KICKED):
+            just_left = True
+
+        return just_joined, just_left
 
     @staticmethod
     def send_message(update, context: CallbackContext, text: str):
@@ -135,30 +148,30 @@ class Samaritan:
         return context.bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='MarkdownV2')
 
     def start_polling(self):
-        self.updater.start_polling()
+        self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
-    def add_handles(self):
-        self.dispatcher.add_handler(CommandHandler('chart', self.chart))
-        self.dispatcher.add_handler(CommandHandler('trade', self.trade))
-        self.dispatcher.add_handler(CommandHandler('buy', self.trade))
-        self.dispatcher.add_handler(CommandHandler('start', self.start))
-        self.dispatcher.add_handler(CommandHandler('commands', self.start))
-        self.dispatcher.add_handler(CommandHandler('price', self.price))
-        self.dispatcher.add_handler(CommandHandler('website', self.website))
-        self.dispatcher.add_handler(CommandHandler('marketcap', self.mc))
-        self.dispatcher.add_handler(CommandHandler('socials', self.socials))
-        self.dispatcher.add_handler(CommandHandler('contract', self.contract))
-        self.dispatcher.add_handler(CommandHandler('shill', self.shillin))
-        self.dispatcher.add_handler(CommandHandler('shillin', self.shillin))
-        self.dispatcher.add_handler(CommandHandler('shillreddit', self.shill_reddit))
-        self.dispatcher.add_handler(CommandHandler('shillist', self.shill_list))
-        self.dispatcher.add_handler(CommandHandler('shilltwitter', self.shill_reddit))
-        self.dispatcher.add_handler(CommandHandler('shilltelegram', self.shill_telegram))
-        self.dispatcher.add_handler(CommandHandler('shilltg', self.shill_telegram))
-        self.dispatcher.add_handler(CommandHandler('contest', self.contest))
-        self.dispatcher.add_handler(CommandHandler('leaderboard', self.leaderboard))
-        self.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, self.new_member))
-        self.dispatcher.add_handler(MessageHandler(Filters.status_update.left_chat_member, self.left_member))
+    def add_handles(self, dp):
+        dp.add_handler(CommandHandler('chart', self.chart))
+        dp.add_handler(CommandHandler('trade', self.trade))
+        dp.add_handler(CommandHandler('buy', self.trade))
+        dp.add_handler(CommandHandler('start', self.start))
+        dp.add_handler(CommandHandler('commands', self.start))
+        dp.add_handler(CommandHandler('price', self.price))
+        dp.add_handler(CommandHandler('website', self.website))
+        dp.add_handler(CommandHandler('marketcap', self.mc))
+        dp.add_handler(CommandHandler('socials', self.socials))
+        dp.add_handler(CommandHandler('contract', self.contract))
+        dp.add_handler(CommandHandler('shill', self.shillin))
+        dp.add_handler(CommandHandler('shillin', self.shillin))
+        dp.add_handler(CommandHandler('shillreddit', self.shill_reddit))
+        dp.add_handler(CommandHandler('shillist', self.shill_list))
+        dp.add_handler(CommandHandler('shilltwitter', self.shill_reddit))
+        dp.add_handler(CommandHandler('shilltelegram', self.shill_telegram))
+        dp.add_handler(CommandHandler('shilltg', self.shill_telegram))
+        dp.add_handler(CommandHandler('contest', self.contest))
+        dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
+        dp.add_handler(ChatMemberHandler(
+            chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
 
     @staticmethod
     def _format_link(prefix, chat_id, msg_id):
@@ -168,13 +181,6 @@ class Samaritan:
     def setup(log_level):
         logging.basicConfig(level=log_level,
                             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    @staticmethod
-    def _read_api(api_key_file):
-        if not os.path.exists(api_key_file):
-            api_key_file = os.path.dirname(os.getcwd()) + '/' + api_key_file
-        key_file = open(api_key_file)
-        return key_file.read()
 
     def check_commands(self):
         for key in self.dispatcher.handlers.keys():
