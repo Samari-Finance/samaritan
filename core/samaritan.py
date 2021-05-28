@@ -6,7 +6,7 @@ from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHan
     Filters
 from core.commands import commands
 from core.db.mongo_db import MongoConn
-from core.utils import read_api, pp_json, send_message
+from core.utils import read_api, pp_json, send_message, MARKDOWN_V2
 
 KICKED = ChatMember.KICKED
 LEFT = ChatMember.LEFT
@@ -35,7 +35,7 @@ class Samaritan:
         send_message(update, context, text=commands['start'])
 
     def website(self, update, context):
-        send_message(update, context, commands['website'])
+        send_message(update, context, commands['website'], parse_mode=MARKDOWN_V2)
 
     def chart(self, update, context):
         send_message(update, context, commands['chart'])
@@ -59,7 +59,7 @@ class Samaritan:
         send_message(update, context, commands['mc'])
 
     def lp(self, update, context):
-        send_message(update, context, commands['lp'], disable_web_page_preview=True, parse_mode='MarkdownV2')
+        send_message(update, context, commands['lp'], disable_web_page_preview=True, parse_mode=MARKDOWN_V2)
 
     def shill_list(self, update: Update, context: CallbackContext):
         now = datetime.now()
@@ -84,7 +84,7 @@ class Samaritan:
             self.shillreddit_timer = now
         else:
             send_message(
-                update, context, parse_mode='MarkdownV2',
+                update, context, parse_mode=MARKDOWN_V2,
                 text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
 
     def shill_telegram(self, update, context):
@@ -201,10 +201,13 @@ class Samaritan:
             Filters.regex(re.compile(r'contract\??', re.IGNORECASE)) |
             Filters.regex(re.compile(r'sc\??', re.IGNORECASE)),
             self.contract))
-
-    @staticmethod
-    def _format_link(prefix, chat_id, msg_id):
-        return f"{prefix}/{chat_id}/{msg_id})"
+        dp.add_handler(MessageHandler(
+            Filters.regex(re.compile(r'website\??', re.IGNORECASE)),
+            self.website))
+        dp.add_handler(MessageHandler(
+            Filters.regex(re.compile(r'pancakeswap\??', re.IGNORECASE)) |
+            Filters.regex(re.compile(r'pcs\??', re.IGNORECASE)),
+            self.trade))
 
     @staticmethod
     def setup(log_level):

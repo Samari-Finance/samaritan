@@ -69,7 +69,7 @@ commands = {
              '/shillreddit - template for reddit shill\n'
              '/shilltelegram or /shilltg - template for shill on Telegram\n'
              '/shilltwitter - template for twitter shill\n',
-    "website": 'https://Samari.finance',
+    "website": '[Samari\.finance](https://Samari.finance)',
     "contract": 'https://bscscan.com/address/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
     "socials": '🌐 Website: https://Samari.finance\n'
                '🐦 Twitter: https://twitter.com/SamariFinance\n'
