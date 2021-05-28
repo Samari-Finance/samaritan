@@ -21,8 +21,8 @@ def pp_json(msg):
     print(json.dumps(json_str, indent=3))
 
 
-def send_message(update: Update, context: CallbackContext, text: str, reply=bool,
-                 disable_web_page_preview=DEFAULT_NONE, parse_mode=DEFAULT_NONE):
+def send_message(update: Update, context: CallbackContext, text: str, reply=True,
+                 disable_web_page_preview=DEFAULT_NONE, parse_mode=DEFAULT_NONE, disable_notification=False):
     reply_to_msg_id = None
     if reply:
         reply_to_msg_id = update.message.message_id
@@ -31,4 +31,5 @@ def send_message(update: Update, context: CallbackContext, text: str, reply=bool
                                     text=text,
                                     parse_mode=parse_mode,
                                     reply_to_message_id=reply_to_msg_id,
-                                    disable_web_page_preview=disable_web_page_preview)
+                                    disable_web_page_preview=disable_web_page_preview,
+                                    disable_notification=disable_notification)
