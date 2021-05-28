@@ -46,7 +46,7 @@ shillreddit = 'Samari finance | Charity platform, 1 day old, 1k holders, and dev
               ' and legal matters. The telegram currently consists of a very active, involved community of 300 members,' \
               ' that is rapidly growing.\n' \
               '\n💰 Wallet addresses:\n' \
-              'Charity & Marketing contract: https://bscscan.com/address/0x148fc609378af4256f2e799ebceea032fc346474\n' \
+              'Charity & Marketing contract: https://bscscan.com/address/0xf56846f6a95ef3ab07b048940df054b5eb842ca1\n' \
               'Team & Burn: https://bscscan.com/token/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be?a=0x2d045410f002a95efcee67759a92518fa3fce677\n' \
               '\n▶️ LINKS:\n🧿 Contract Address: https://bscscan.com/address/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' \
               '🌍 Website: Samari.Finance\n' \
