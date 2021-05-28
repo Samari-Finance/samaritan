@@ -1,11 +1,12 @@
-import json
 import logging
+import re
 from datetime import datetime, timedelta
 from telegram import Update, ChatMember
-from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler
+from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler, MessageHandler, \
+    Filters
 from core.commands import commands
 from core.db.mongo_db import MongoConn
-from utils.utils import read_api, pp_json
+from core.utils import read_api, pp_json, send_message
 
 KICKED = ChatMember.KICKED
 LEFT = ChatMember.LEFT
@@ -31,36 +32,42 @@ class Samaritan:
         self.db = MongoConn(read_api(db_path))
 
     def start(self, update: Update, context: CallbackContext):
-        self.send_message(update, context, text=commands['start'])
+        send_message(update, context, text=commands['start'])
 
     def website(self, update, context):
-        self.send_message(update, context, commands['website'])
+        send_message(update, context, commands['website'])
 
     def chart(self, update, context):
-        self.send_message(update, context, commands['chart'])
+        send_message(update, context, commands['chart'])
+
+    def version(self, up, ctx):
+        send_message(up, ctx, 'V2')
 
     def trade(self, update, context):
-        self.send_message(update, context, commands['trade'])
+        send_message(update, context, commands['trade'])
 
     def contract(self, update, context):
-        self.send_message(update, context, commands['contract'])
+        send_message(update, context, commands['contract'], disable_web_page_preview=True)
 
     def socials(self, update, context):
-        self.send_message(update, context, commands['socials'])
+        send_message(update, context, commands['socials'])
 
     def price(self, update, context):
-        self.send_message(update, context, commands['price'])
+        send_message(update, context, commands['price'])
 
     def mc(self, update, context):
-        self.send_message(update, context, commands['mc'])
+        send_message(update, context, commands['mc'])
+
+    def lp(self, update, context):
+        send_message(update, context, commands['lp'], disable_web_page_preview=True, parse_mode='MarkdownV2')
 
     def shill_list(self, update: Update, context: CallbackContext):
         now = datetime.now()
         if self.shillist_timer + timedelta(minutes=30) <= now:
-            self.shillist_msg = self.send_message(update, context, commands['shillist'])
+            self.shillist_msg = send_message(update, context, commands['shillist'])
             self.shillist_timer = now
         else:
-            self.send_message_markdown(
+            send_message(
                 update, context, text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
 
     @staticmethod
@@ -68,34 +75,36 @@ class Samaritan:
         return f"{commands[command]}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
 
     def shillin(self, update, context):
-        self.send_message(update, context, commands['shillin'])
+        send_message(update, context, commands['shillin'])
 
     def shill_reddit(self, update, context):
         now = datetime.now()
         if self.shillreddit_timer + timedelta(minutes=10) <= now:
-            self.shillreddit_msg = self.send_message(update, context, commands['shillreddit'])
+            self.shillreddit_msg = send_message(update, context, commands['shillreddit'])
             self.shillreddit_timer = now
         else:
-            self.send_message_markdown(
-                update, context,
+            send_message(
+                update, context, parse_mode='MarkdownV2',
                 text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
 
     def shill_telegram(self, update, context):
-        self.send_message(update, context, commands['shilltelegram'])
+        send_message(update, context, commands['shilltelegram'])
 
     def shill_twitter(self, update, context):
-        self.send_message(update, context, commands['shilltwitter'])
+        send_message(update, context, commands['shilltwitter'])
 
     def contest(self, update: Update, context: CallbackContext):
-        user_id = update.effective_user.id
+        user = update.effective_user
         chat_id = update.effective_chat.id
-        link = self.db.get_invite_by_user_id(user_id)
+        link = self.db.get_invite_by_user_id(user.id)
         if not link:
             link = context.bot.create_chat_invite_link(chat_id).invite_link
-            self.db.insert_invite_link(link=link, user_id=user_id)
+            self.db.set_invite_link_by_id(link=link, user_id=user.id)
         else:
             link = link['invite_link']
-        self.send_message(update, context, f'Here is your personal invite link: {link}')
+        send_message(update, context,
+                     reply=True,
+                     text=f'Here is your personal invite link: {link}')
 
     def member_updated(self, update: Update, context: CallbackContext):
         new_status = update.chat_member.new_chat_member.status
@@ -119,13 +128,30 @@ class Samaritan:
         self.db.remove_ref(user_id=update.effective_user.id)
 
     def leaderboard(self, update: Update, context: CallbackContext):
-        msg = f'🏆 INVITE CONTEST LEADERBOARD 🏆\n'
+        limit = 10
         counter = 1
+        chat = update.effective_chat
+        user = update.effective_user
+        msg = f'🏆 INVITE CONTEST LEADERBOARD 🏆\n\n'
         scoreboard = sorted(self.db.get_members_pts(), key=lambda i: i['pts'])
 
-        for member in scoreboard:
-            msg += f'{counter}. {update.effective_chat.get_member(member["id"]).user.name} with {member["pts"]} pts\n'
-        self.send_message(update, context, msg)
+        try:
+            if len(context.args) > 0:
+                limit = int(context.args[0])
+                if limit > 50:
+                    limit = 50
+            for member in scoreboard[:limit]:
+                msg += f'{counter}. with {member["pts"]} {"pts:":<10}' \
+                       f'{chat.get_member(member["id"]).user.full_name}\n'
+                counter += 1
+
+            caller = next((x for x in scoreboard if x['id'] == user.id))
+            if caller:
+                msg += f'\nYour score: {scoreboard.index(caller)+1}. with {caller["pts"]} {"pts":<10}'
+            send_message(update, context, msg)
+
+        except ValueError:
+            send_message(update, context, f'Invalid argument: {context.args} for leaderboard command')
 
     @staticmethod
     def evaluate_membership(new, old):
@@ -139,39 +165,42 @@ class Samaritan:
 
         return just_joined, just_left
 
-    @staticmethod
-    def send_message(update, context: CallbackContext, text: str):
-        return context.bot.send_message(chat_id=update.message.chat_id, text=text)
-
-    @staticmethod
-    def send_message_markdown(update, context: CallbackContext, text: str):
-        return context.bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='MarkdownV2')
-
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
     def add_handles(self, dp):
         dp.add_handler(CommandHandler('chart', self.chart))
-        dp.add_handler(CommandHandler('trade', self.trade))
-        dp.add_handler(CommandHandler('buy', self.trade))
+        dp.add_handler(CommandHandler(['trade', 'buy'], self.trade))
         dp.add_handler(CommandHandler('start', self.start))
         dp.add_handler(CommandHandler('commands', self.start))
         dp.add_handler(CommandHandler('price', self.price))
         dp.add_handler(CommandHandler('website', self.website))
-        dp.add_handler(CommandHandler('marketcap', self.mc))
+        dp.add_handler(CommandHandler(['mc', 'marketcap'], self.mc))
         dp.add_handler(CommandHandler('socials', self.socials))
         dp.add_handler(CommandHandler('contract', self.contract))
-        dp.add_handler(CommandHandler('shill', self.shillin))
-        dp.add_handler(CommandHandler('shillin', self.shillin))
+        dp.add_handler(CommandHandler(['shillin', 'shill'], self.shillin))
         dp.add_handler(CommandHandler('shillreddit', self.shill_reddit))
         dp.add_handler(CommandHandler('shillist', self.shill_list))
-        dp.add_handler(CommandHandler('shilltwitter', self.shill_reddit))
-        dp.add_handler(CommandHandler('shilltelegram', self.shill_telegram))
-        dp.add_handler(CommandHandler('shilltg', self.shill_telegram))
-        dp.add_handler(CommandHandler('contest', self.contest))
+        dp.add_handler(CommandHandler('shilltwitter', self.shill_telegram))
+        dp.add_handler(CommandHandler(['shilltelegram', 'shilltg'], self.shill_telegram))
+        dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
+        dp.add_handler(MessageHandler(
+            Filters.regex(re.compile(r'v2\??')) |
+            Filters.regex(re.compile(r'v1\??')),
+            self.version))
+        dp.add_handler(MessageHandler(
+            Filters.regex(re.compile(r'lp locked\??', re.IGNORECASE)) |
+            Filters.regex(re.compile(r'liquidity locked\??', re.IGNORECASE)) |
+            Filters.regex(re.compile(r'locked\??', re.IGNORECASE)) |
+            Filters.regex(re.compile(r'lp\??', re.IGNORECASE)),
+            self.lp))
+        dp.add_handler(MessageHandler(
+            Filters.regex(re.compile(r'contract\??', re.IGNORECASE)) |
+            Filters.regex(re.compile(r'sc\??', re.IGNORECASE)),
+            self.contract))
 
     @staticmethod
     def _format_link(prefix, chat_id, msg_id):
