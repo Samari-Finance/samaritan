@@ -70,11 +70,11 @@ commands = {
              '/shilltelegram or /shilltg - template for shill on Telegram\n'
              '/shilltwitter - template for twitter shill\n',
     "website": 'https://Samari.finance',
-    "contract:": 'Contract: https://bscscan.com/address/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
-    "socials": '🌐Website: https://Samari.finance\n'
-               '🐦Twitter: https://twitter.com/SamariFinance\n'
-               '📱Telegram: https://t.me/SamariFinanec\n'
-               '🎮Discord: https://discord.gg/557bPEUB\n',
+    "contract": 'https://bscscan.com/address/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
+    "socials": '🌐 Website: https://Samari.finance\n'
+               '🐦 Twitter: https://twitter.com/SamariFinance\n'
+               '📱 Telegram: https://t.me/SamariFinanec\n'
+               '🎮 Discord: https://discord.gg/557bPEUB\n',
     "chart": 'https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
     "trade": 'https://exchange.pancakeswap.finance/#/swap?outputCurrency=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
     "price": 'Live price has not been implemented yet, sorry',  # todo
@@ -89,4 +89,5 @@ commands = {
     "shilltelegram": shilltg,  # todo
     "shilltwitter": 'Samari.finance, brand new charity based token with 1k holders, doxxed devs, '
                     'influencers from Instagram and YouTube planned for TONIGHT #SamariFinance',
+    "lp": 'Locked on [DxSale](https://dxsale.app/app/pages/dxlockview?id=0&add=0x1F79B8aef7854D86e2cC89Ada44CB95a33cd72Cf&type=lplock&chain=BSC)',
 }
