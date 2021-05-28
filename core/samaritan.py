@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from telegram import Update, ChatMember
 from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler, MessageHandler, \
     Filters
-from core.commands import commands
+from core.default_commands import commands
 from core.db.mongo_db import MongoConn
 from core.utils import read_api, pp_json, send_message, MARKDOWN_V2
 
