@@ -1,16 +1,20 @@
-shilltg = '🌜 Samari is launching soon! 🌛\n' \
-          'Join the community on TG – you won’t waste your time!\n\n' \
+shilltg = '🌜 Samari is about to EXPLODE! 🌛\n' \
+          'AMA Sundary 10:00 AM - UK TIME with 100$ contest. \n ' \
+          'TELEGRAM & Twitter contests starting next week with prizes determined by CONTRACT FEES, ' \
+          'together with a 10 day campaign with KSI VIDEO EDITOR: MO SYED\n'\
+          'WebsiteV2 coming up as well (Preview Monday). 5M MC = KSI Shoutout. You don\'t want to miss this\n\n' \
+          'Join the SAMARITANS on TG \n\n' \
           'TELEGRAM: t.me/SamariFinance\n' \
           'WEBSITE: Samari.finance\n\n' \
-          '👉 Team doxed\n' \
+          '👉 Team doxxed\n' \
           '👉 Active community\n' \
           '👉 Charitable Organization\n' \
           '👉 Marketing Strategy\n' \
           '👉 $100K MC at launch – stable liquidity, no p&d scheme\n' \
-          '👉 Solid tokenomics\n\n' \
+          '👉 Sustainable tokenomics\n\n' \
           '💰 BUY $Samari (V2): link\n' \
           '📈 CHART (V2): link\n' \
-          '🔒 LIQUIDITY BURNED // OWNERSHIP RENOUNCED\n' \
+          '🔒 LIQUIDITY Locked // OWNERSHIP RENOUNCED\n' \
           '✅ VERIFIED CONTRACT: link\n'
 shillreddit = 'Samari finance | Charity platform, 1 day old, 1k holders, and devs are doxxed\n' \
               'Welcome Samaritans!\n' \

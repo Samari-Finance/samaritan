@@ -87,7 +87,9 @@ class Samaritan:
                 update, context, parse_mode=MARKDOWN_V2,
                 text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
 
-    def shill_telegram(self, update, context):
+    def shill_telegram(self, update: Update, context: CallbackContext):
+        if len(context.args) > 0:
+            commands['shilltelegram'] = ''.join(context.args)
         send_message(update, context, commands['shilltelegram'])
 
     def shill_twitter(self, update, context):
@@ -107,19 +109,17 @@ class Samaritan:
                      text=f'Here is your personal invite link: {link}')
 
     def member_updated(self, update: Update, context: CallbackContext):
-        new_status = update.chat_member.new_chat_member.status
-        old_status = update.chat_member.old_chat_member.status
-        if self.evaluate_membership(new_status, old_status)[1]:
-            print('evaluated left')
-            self.left_member(update, context)
-        elif self.evaluate_membership(new_status, old_status)[0]:
-            print('evaluated joined')
-            self.new_member(update, context)
+        if update.chat_member.new_chat_member and update.chat_member.old_chat_member:
+            new_status = update.chat_member.new_chat_member.status
+            old_status = update.chat_member.old_chat_member.status
+            if self.evaluate_membership(new_status, old_status)[1]:
+                print('evaluated left')
+                self.left_member(update, context)
+            elif self.evaluate_membership(new_status, old_status)[0]:
+                print('evaluated joined')
+                self.new_member(update, context)
 
     def new_member(self, update: Update, context: CallbackContext):
-        print('new member')
-        pp_json(update.chat_member.to_json())
-
         if update.chat_member.invite_link:
             link = update.chat_member.invite_link.invite_link
             self.db.set_new_ref(link, update.effective_user.id)
