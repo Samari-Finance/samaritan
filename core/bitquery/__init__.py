@@ -1,6 +1,6 @@
 import requests
 
-from utils.utils import read_api
+from core.utils import read_api
 
 api_key = read_api('bitquery_api')
 
