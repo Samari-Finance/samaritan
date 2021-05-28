@@ -1,5 +1,7 @@
 from pymongo import MongoClient
 
+from core.default_commands import commands
+
 
 class MongoConn:
 
@@ -35,12 +37,34 @@ class MongoConn:
     def get_members(self):
         return self.members
 
-    def get_attr(self):
-        return self.attr
+    def get_handlers(self):
+        return self.handlers
+
+    def set_default_handlers(self):
+        for key, value in commands.items():
+            self.handlers.update_one({'_id': key}, {'$set': {'text': value}}, upsert=True)
+
+    def set_handler_description(self, command: str, description: str):
+        self._upsert_handler(command, 'timeout', description)
+
+    def set_handler_enabled(self, command, on):
+        self._upsert_handler(command, 'enabled', on)
+
+    def set_handler_type(self, command: str, handler_type: str):
+        self._upsert_handler(command, 'type', handler_type)
+
+    def set_handler_timeout(self, command: str, timeout_in_sec: int):
+        self._upsert_handler(command, 'timeout', timeout_in_sec)
+
+    def set_handler_parse_mode(self, command: str, parse_mode: str):
+        self._upsert_handler(command, 'parse_mode', parse_mode)
+
+    def _upsert_handler(self, command: str, key: str, value):
+        self.handlers.update({'_id': command}, {'$set': {key: value}}, upsert=True)
 
     def _init_cols(self):
         self.members = self.db['members']
-        self.attr = self.db['attr']
+        self.handlers = self.db['handlers']
 
     def _init_conn(self, path):
         self.client = MongoClient(path)
