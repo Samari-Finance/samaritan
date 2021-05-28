@@ -5,6 +5,9 @@ from telegram import Update
 from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
 
+MARKDOWN_V2 = 'MarkdownV2'
+HTML = 'html'
+
 
 def read_api(api_key_file):
     if not os.path.exists(api_key_file):
