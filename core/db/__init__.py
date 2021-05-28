@@ -1,5 +1,6 @@
 import sqlite3
 from sqlite3 import Error
+from .mongo_db import MongoConn
 
 
 def init_connection(path):
@@ -10,4 +11,3 @@ def init_connection(path):
     except Error as e:
         print(f'Connection error: {e}')
     return connection
-
