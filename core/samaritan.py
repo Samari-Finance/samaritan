@@ -1,6 +1,8 @@
 import logging
 import re
 from datetime import datetime, timedelta
+
+import telegram
 from telegram import Update, ChatMember
 from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler, MessageHandler, \
     Filters
@@ -37,17 +39,34 @@ class Samaritan:
     def website(self, update, context):
         send_message(update, context, commands['website'], parse_mode=MARKDOWN_V2)
 
-    def chart(self, update, context):
+    def website_regex(self, update: Update, context):
+        if self.isnot_sentence(update.message):
+            self.website(update, context)
+
+    def chart(self, update: Update, context):
         send_message(update, context, commands['chart'])
 
+    def chart_regex(self, update, context):
+        if self.isnot_sentence(update.message):
+            self.chart(update, context)
+
     def version(self, up, ctx):
-        send_message(up, ctx, 'V2')
+        if self.isnot_sentence(up.message):
+            send_message(up, ctx, 'V2')
 
     def trade(self, update, context):
         send_message(update, context, commands['trade'])
 
+    def trade_regex(self, update: Update, context):
+        if self.isnot_sentence(update.message):
+            self.trade(update, context)
+
     def contract(self, update, context):
         send_message(update, context, commands['contract'], disable_web_page_preview=True)
+
+    def contract_regex(self, update: Update, context):
+        if self.isnot_sentence(update.message):
+            self.contract(update, context)
 
     def socials(self, update, context):
         send_message(update, context, commands['socials'])
@@ -57,6 +76,10 @@ class Samaritan:
 
     def mc(self, update, context):
         send_message(update, context, commands['mc'])
+
+    def lp_regex(self, update: Update, context):
+        if self.isnot_sentence(update.message):
+            self.lp(update, context)
 
     def lp(self, update, context):
         send_message(update, context, commands['lp'], disable_web_page_preview=True, parse_mode=MARKDOWN_V2)
@@ -89,7 +112,7 @@ class Samaritan:
 
     def shill_telegram(self, update: Update, context: CallbackContext):
         if len(context.args) > 0:
-            commands['shilltelegram'] = ''.join(context.args)
+            commands['shilltelegram'] = ' '.join(context.args)
         send_message(update, context, commands['shilltelegram'])
 
     def shill_twitter(self, update, context):
@@ -196,18 +219,26 @@ class Samaritan:
             Filters.regex(re.compile(r'liquidity locked\??', re.IGNORECASE)) |
             Filters.regex(re.compile(r'locked\??', re.IGNORECASE)) |
             Filters.regex(re.compile(r'lp\??', re.IGNORECASE)),
-            self.lp))
+            self.lp_regex))
         dp.add_handler(MessageHandler(
             Filters.regex(re.compile(r'contract\??', re.IGNORECASE)) |
             Filters.regex(re.compile(r'sc\??', re.IGNORECASE)),
-            self.contract))
+            self.contract_regex))
         dp.add_handler(MessageHandler(
             Filters.regex(re.compile(r'website\??', re.IGNORECASE)),
-            self.website))
+            self.website_regex))
         dp.add_handler(MessageHandler(
             Filters.regex(re.compile(r'pancakeswap\??', re.IGNORECASE)) |
             Filters.regex(re.compile(r'pcs\??', re.IGNORECASE)),
-            self.trade))
+            self.trade_regex))
+        dp.add_handler(MessageHandler(
+            Filters.regex(re.compile(r'chart\??', re.IGNORECASE)),
+            self.chart_regex
+        ))
+
+    @staticmethod
+    def isnot_sentence(msg: telegram.Message):
+        return len(msg.text.split()) < 4
 
     @staticmethod
     def setup(log_level):
