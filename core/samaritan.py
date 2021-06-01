@@ -8,7 +8,7 @@ from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHan
     Filters
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
-from core.utils import read_api, pp_json, send_message, MARKDOWN_V2
+from core.utils import read_api, send_message, MARKDOWN_V2
 
 KICKED = ChatMember.KICKED
 LEFT = ChatMember.LEFT
@@ -22,7 +22,8 @@ class Samaritan:
                  api_key_file: str = None,
                  db_path: str = None,
                  log_level: logging = logging.INFO):
-        self.setup(log_level=log_level)
+        setup_log(log_level=log_level)
+        check_commands()
         self.updater = Updater(token=read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
         self.shillist_timer = datetime.now() - timedelta(minutes=30)
@@ -30,8 +31,20 @@ class Samaritan:
         self.add_handles(self.dispatcher)
         self.shillist_msg = None
         self.shillreddit_msg = None
-        self.check_commands()
         self.db = MongoConn(read_api(db_path))
+
+
+    def gen_handler_attr(self):
+        for key in self.db.handlers:
+            setattr(key['_id'], )
+
+    def gen_handler(self, handler_name: str):
+
+        def handler(attributes: dict):
+            if 'command' in dict.keys():
+                return self.gen_commandhandler(handler_name, attributes)
+        return handler
+
 
     def start(self, update: Update, context: CallbackContext):
         send_message(update, context, text=commands['start'])
@@ -236,16 +249,17 @@ class Samaritan:
             self.chart_regex
         ))
 
-    @staticmethod
-    def isnot_sentence(msg: telegram.Message):
-        return len(msg.text.split()) < 4
 
-    @staticmethod
-    def setup(log_level):
-        logging.basicConfig(level=log_level,
-                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+def check_commands(dispatcher: telegram.ext.Dispatcher):
+    for key in dispatcher.handlers.values():
+        if key not in commands:
+            print(f'Command missing: {key}')
 
-    def check_commands(self):
-        for key in self.dispatcher.handlers.keys():
-            if key not in commands:
-                print(f'Command missing: {key}')
+
+def regex_req(msg: telegram.Message):
+    return len(msg.text.split()) < 4
+
+
+def setup_log(log_level):
+    logging.basicConfig(level=log_level,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

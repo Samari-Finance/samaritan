@@ -42,7 +42,7 @@ class MongoConn:
 
     def set_default_handlers(self):
         for key, value in commands.items():
-            self.handlers.update_one({'_id': key}, {'$set': {'text': value}}, upsert=True)
+            self.default_handlers.update_one({'_id': key}, {'$set': {'text': value}}, upsert=True)
 
     def set_handler_description(self, command: str, description: str):
         self._upsert_handler(command, 'timeout', description)
@@ -65,6 +65,7 @@ class MongoConn:
     def _init_cols(self):
         self.members = self.db['members']
         self.handlers = self.db['handlers']
+        self.default_handlers = self.db['default_handlers']
 
     def _init_conn(self, path):
         self.client = MongoClient(path)
