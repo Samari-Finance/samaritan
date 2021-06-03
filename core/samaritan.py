@@ -51,45 +51,33 @@ class Samaritan:
         send_message(update, context, commands['website'], parse_mode=MARKDOWN_V2)
 
     def website_regex(self, update: Update, context):
-        if self.isnot_sentence(update.message):
-            self.website(update, context)
-
-    def chart(self, update: Update, context):
-        send_message(update, context, commands['chart'])
+        if regex_req(update.message):
+            send_message(update, context, commands['website']['text'], parse_mode=MARKDOWN_V2)
 
     def chart_regex(self, update, context):
-        if self.isnot_sentence(update.message):
-            self.chart(update, context)
+        if regex_req(update.message):
+            send_message(update, context, commands['chart']['text'])
 
     def version(self, up, ctx):
-        if self.isnot_sentence(up.message):
+        if regex_req(up.message):
             send_message(up, ctx, 'V2')
 
-    def trade(self, update, context):
-        send_message(update, context, commands['trade'])
-
     def trade_regex(self, update: Update, context):
-        if self.isnot_sentence(update.message):
-            self.trade(update, context)
+        if regex_req(update.message):
+            getattr(self, f"_handler_trade")(update, context)
 
     def contract(self, update, context):
         send_message(update, context, commands['contract'], disable_web_page_preview=True)
 
     def contract_regex(self, update: Update, context):
-        if self.isnot_sentence(update.message):
+        if regex_req(update.message):
             self.contract(update, context)
-
-    def socials(self, update, context):
-        send_message(update, context, commands['socials'])
 
     def price(self, update, context):
         send_message(update, context, commands['price'])
 
-    def mc(self, update, context):
-        send_message(update, context, commands['mc'])
-
     def lp_regex(self, update: Update, context):
-        if self.isnot_sentence(update.message):
+        if regex_req(update.message):
             self.lp(update, context)
 
     def lp(self, update, context):
