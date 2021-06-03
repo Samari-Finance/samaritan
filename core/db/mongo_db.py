@@ -11,7 +11,7 @@ class MongoConn:
 
     def set_invite_link_by_id(self, link, user_id):
         self.members.insert({'_id': user_id,
-                            'invite_link': link})
+                             'invite_link': link})
 
     def set_new_ref(self, link, new_ref_user_id):
         self.members.update_one({'invite_link': link}, {'$push': {'refs': new_ref_user_id},
@@ -42,10 +42,23 @@ class MongoConn:
 
     def set_default_handlers(self):
         for key, value in commands.items():
-            self.default_handlers.update_one({'_id': key}, {'$set': {'text': value}}, upsert=True)
+            self.default_handlers.update_one({'_id': key},
+                                             {'$set': {
+                                                 'text': value.get('text', ),
+                                                 'type': value.get('type', 'command'),
+                                                 'aliases': value.get('aliases', [key]),
+                                                 'delay': value.get('delay')
+                                             }}, upsert=True)
+
+    def get_text_by_handler(self, key: str):
+        text = self.handlers.find_one({'_id': key})['text']
+
+        if not text:
+            text = self.default_handlers.find_one({'_id': key})['text']
+        return text
 
     def set_handler_description(self, command: str, description: str):
-        self._upsert_handler(command, 'timeout', description)
+        self._upsert_handler(command, 'delay', description)
 
     def set_handler_enabled(self, command, on):
         self._upsert_handler(command, 'enabled', on)
@@ -53,8 +66,8 @@ class MongoConn:
     def set_handler_type(self, command: str, handler_type: str):
         self._upsert_handler(command, 'type', handler_type)
 
-    def set_handler_timeout(self, command: str, timeout_in_sec: int):
-        self._upsert_handler(command, 'timeout', timeout_in_sec)
+    def set_handler_delay(self, command: str, timeout_in_sec: int):
+        self._upsert_handler(command, 'delay', timeout_in_sec)
 
     def set_handler_parse_mode(self, command: str, parse_mode: str):
         self._upsert_handler(command, 'parse_mode', parse_mode)
@@ -66,6 +79,7 @@ class MongoConn:
         self.members = self.db['members']
         self.handlers = self.db['handlers']
         self.default_handlers = self.db['default_handlers']
+        self.set_default_handlers()
 
     def _init_conn(self, path):
         self.client = MongoClient(path)
