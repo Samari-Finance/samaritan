@@ -6,6 +6,8 @@ import telegram
 from telegram import Update, ChatMember
 from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler, MessageHandler, \
     Filters
+from telegram.utils.helpers import DEFAULT_NONE
+
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
 from core.utils import read_api, send_message, MARKDOWN_V2
