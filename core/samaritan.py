@@ -33,22 +33,61 @@ class Samaritan:
         self.add_handles(self.dispatcher)
 
     def gen_handler_attr(self):
-        for key in self.db.handlers:
-            setattr(key['_id'], )
+        for key in self.db.default_handlers.find():
+            _handle = self.gen_handler(key)
+            setattr(self, f"_handler_{key['_id']}", _handle)
 
-    def gen_handler(self, handler_name: str):
+    def gen_handler(self, handler_attr: dict):
 
-        def handler(attributes: dict):
-            if 'command' in dict.keys():
-                return self.gen_commandhandler(handler_name, attributes)
+        def handler(update, context):
+            if 'command' == handler_attr['type']:
+                return self.gen_command_handler(update, context, handler_attr)
+            elif 'timed' == handler_attr['type']:
+                return self.gen_timed_handler(update, context, handler_attr)
+            elif 'regex' == handler_attr['type']:
+                return self.gen_regex_handler(update, context, handler_attr)
         return handler
 
+    def gen_command_handler(self, update, context, attributes: dict):
+        return send_message(update, context,
+                            text=attributes['text'],
+                            reply=attributes.get('reply', False),
+                            parse_mode=attributes.get('parse_mode', DEFAULT_NONE),
+                            disable_notification=attributes.get('disable_notification', False),
+                            disable_web_page_preview=attributes.get('disable_web_preview', DEFAULT_NONE))
 
-    def start(self, update: Update, context: CallbackContext):
-        send_message(update, context, text=commands['start'])
+    def gen_timed_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
+        now = datetime.now()
+        timer_str = f"_{attributes['_id']}_timer"
+        msg_str = f"_{attributes['_id']}_msg"
+        attr_delay = timedelta(seconds=attributes.get('delay', DEFAULT_DELAY))
+        attr_timer = getattr(self, timer_str, now - attr_delay)
 
-    def website(self, update, context):
-        send_message(update, context, commands['website'], parse_mode=MARKDOWN_V2)
+        if attr_timer + attr_delay <= now:
+            new_msg = send_message(up, ctx, attributes.get('text'))
+            setattr(self, msg_str, new_msg)
+            setattr(self, timer_str, now)
+        else:
+            send_message(up, ctx,
+                         text=self._prettify_reference(up, getattr(self, msg_str).message_id.real),
+                         parse_mode=MARKDOWN_V2)
+
+    def gen_regex_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
+        if regex_req(up.message):
+            return getattr(self, f"_handler_{attributes['_id']}")
+
+    def set_dp_handlers(self, dp):
+        self.gen_handler_attr()
+        resolvers = {
+            'command': CommandHandler,
+            'timed': CommandHandler,
+            'regex': MessageHandler,
+        }
+        for key in self.db.default_handlers.find():
+            if key['type'] == 'util':
+                continue
+            handler_type = resolvers[key['type']]
+            dp.add_handler(handler_type(key['aliases'], getattr(self, f"_handler_{key['_id']}")))
 
     def website_regex(self, update: Update, context):
         if regex_req(update.message):
