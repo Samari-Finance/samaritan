@@ -15,6 +15,8 @@ LEFT = ChatMember.LEFT
 MEMBER = ChatMember.MEMBER
 ADMIN = ChatMember.ADMINISTRATOR
 
+DEFAULT_DELAY = timedelta(seconds=30)
+
 
 class Samaritan:
 
@@ -23,16 +25,10 @@ class Samaritan:
                  db_path: str = None,
                  log_level: logging = logging.INFO):
         setup_log(log_level=log_level)
-        check_commands()
         self.updater = Updater(token=read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
-        self.shillist_timer = datetime.now() - timedelta(minutes=30)
-        self.shillreddit_timer = datetime.now() - timedelta(minutes=10)
-        self.add_handles(self.dispatcher)
-        self.shillist_msg = None
-        self.shillreddit_msg = None
         self.db = MongoConn(read_api(db_path))
-
+        self.add_handles(self.dispatcher)
 
     def gen_handler_attr(self):
         for key in self.db.handlers:
@@ -97,39 +93,9 @@ class Samaritan:
     def lp(self, update, context):
         send_message(update, context, commands['lp'], disable_web_page_preview=True, parse_mode=MARKDOWN_V2)
 
-    def shill_list(self, update: Update, context: CallbackContext):
-        now = datetime.now()
-        if self.shillist_timer + timedelta(minutes=30) <= now:
-            self.shillist_msg = send_message(update, context, commands['shillist'])
-            self.shillist_timer = now
-        else:
-            send_message(
-                update, context, text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
-
     @staticmethod
-    def _prettify_reference(update: Update, command, prev_msg):
-        return f"{commands[command]}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
-
-    def shillin(self, update, context):
-        send_message(update, context, commands['shillin'])
-
-    def shill_reddit(self, update, context):
-        now = datetime.now()
-        if self.shillreddit_timer + timedelta(minutes=10) <= now:
-            self.shillreddit_msg = send_message(update, context, commands['shillreddit'])
-            self.shillreddit_timer = now
-        else:
-            send_message(
-                update, context, parse_mode=MARKDOWN_V2,
-                text=self._prettify_reference(update, 'too_fast', self.shillist_msg.message_id.real))
-
-    def shill_telegram(self, update: Update, context: CallbackContext):
-        if len(context.args) > 0:
-            commands['shilltelegram'] = ' '.join(context.args)
-        send_message(update, context, commands['shilltelegram'])
-
-    def shill_twitter(self, update, context):
-        send_message(update, context, commands['shilltwitter'])
+    def _prettify_reference(update: Update, prev_msg):
+        return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
 
     def contest(self, update: Update, context: CallbackContext):
         user = update.effective_user
@@ -178,13 +144,13 @@ class Samaritan:
                     limit = 50
             for member in scoreboard[:limit]:
                 msg += f'{counter}. with {member["pts"]} {"pts:":<10}' \
-                       f'{chat.get_member(member["id"]).user.full_name}\n'
+                       f'{chat.get_member(member["id"]).user.name}\n'
                 counter += 1
 
             caller = next((x for x in scoreboard if x['id'] == user.id))
             if caller:
                 msg += f'\nYour score: {scoreboard.index(caller)+1}. with {caller["pts"]} {"pts":<10}'
-            send_message(update, context, msg)
+            send_message(update, context, msg, disable_notification=True)
 
         except ValueError:
             send_message(update, context, f'Invalid argument: {context.args} for leaderboard command')
@@ -205,22 +171,9 @@ class Samaritan:
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
     def add_handles(self, dp):
-        dp.add_handler(CommandHandler('chart', self.chart))
-        dp.add_handler(CommandHandler(['trade', 'buy'], self.trade))
-        dp.add_handler(CommandHandler('start', self.start))
-        dp.add_handler(CommandHandler('commands', self.start))
-        dp.add_handler(CommandHandler('price', self.price))
-        dp.add_handler(CommandHandler('website', self.website))
-        dp.add_handler(CommandHandler(['mc', 'marketcap'], self.mc))
-        dp.add_handler(CommandHandler('socials', self.socials))
-        dp.add_handler(CommandHandler('contract', self.contract))
-        dp.add_handler(CommandHandler(['shillin', 'shill'], self.shillin))
-        dp.add_handler(CommandHandler('shillreddit', self.shill_reddit))
-        dp.add_handler(CommandHandler('shillist', self.shill_list))
-        dp.add_handler(CommandHandler('shilltwitter', self.shill_telegram))
-        dp.add_handler(CommandHandler(['shilltelegram', 'shilltg'], self.shill_telegram))
-        dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
+        self.set_dp_handlers(dp)
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
+        dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(MessageHandler(
@@ -248,12 +201,6 @@ class Samaritan:
             Filters.regex(re.compile(r'chart\??', re.IGNORECASE)),
             self.chart_regex
         ))
-
-
-def check_commands(dispatcher: telegram.ext.Dispatcher):
-    for key in dispatcher.handlers.values():
-        if key not in commands:
-            print(f'Command missing: {key}')
 
 
 def regex_req(msg: telegram.Message):
