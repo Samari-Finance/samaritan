@@ -1,8 +1,14 @@
+from datetime import timedelta
+
+from core.utils import MARKDOWN_V2
+
 shilltg = '🌜 Samari is about to EXPLODE! 🌛\n' \
-          'AMA Sundary 10:00 AM - UK TIME with 100$ contest. \n ' \
-          'TELEGRAM & Twitter contests starting next week with prizes determined by CONTRACT FEES, ' \
-          'together with a 10 day campaign with KSI VIDEO EDITOR: MO SYED\n'\
-          'WebsiteV2 coming up as well (Preview Monday). 5M MC = KSI Shoutout. You don\'t want to miss this\n\n' \
+          'While charity alone is great, development focused on bringing utility will in the long run cause more ' \
+          'donations. At Samari we want to bring all the aspects of DEFI under one umbrella' \
+          ', to provide people and animals in need a better future\n' \
+          'TELEGRAM & Twitter contests starting soon with prizes determined by CONTRACT FEES, ' \
+          'together with a 10 day campaign with KSI VIDEO EDITOR: MO SYED\n' \
+          'WebsiteV2 coming up as well. 5M MC = KSI Shoutout. You don\'t want to miss this\n\n' \
           'Join the SAMARITANS on TG \n\n' \
           'TELEGRAM: t.me/SamariFinance\n' \
           'WEBSITE: Samari.finance\n\n' \
@@ -12,16 +18,16 @@ shilltg = '🌜 Samari is about to EXPLODE! 🌛\n' \
           '👉 Marketing Strategy\n' \
           '👉 $100K MC at launch – stable liquidity, no p&d scheme\n' \
           '👉 Sustainable tokenomics\n\n' \
-          '💰 BUY $Samari (V2): link\n' \
-          '📈 CHART (V2): link\n' \
-          '🔒 LIQUIDITY Locked // OWNERSHIP RENOUNCED\n' \
-          '✅ VERIFIED CONTRACT: link\n'
-shillreddit = 'Samari finance | Charity platform, 1 day old, 1k holders, and devs are doxxed\n' \
+          '💰 BUY $Samari (V2): https://exchange.pancakeswap.finance/#/swap?outputCurrency=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' \
+          '📈 CHART (V2): https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' \
+          '🔒 LIQUIDITY Locked \n' \
+          '✅ VERIFIED CONTRACT: https://bscscan.com/token/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n'
+shillreddit = 'Samari finance | Charity platform, 1k holders, devs are doxxed\n' \
               'Welcome Samaritans!\n' \
               '🏵 What is Samari?\n' \
-              '$SAMA is a deflationary, community-powered charitable organization. Samari also offers a yield generating protocol' \
+              '$SAMA is a deflationary, community-powered charitable organization. Samari offers a yield generating protocol' \
               ' – by holding' \
-              '$SAMA you will automatically receive more $SAMA. The 3% redistribution fee allows for passive income, which means,' \
+              'The 3% redistribution fee allows for passive income, which means,' \
               'the more you hold, the more you shall receive! This is accomplished by charging a 10% tax on all transactions, ' \
               'from which 3% are redistributed to existing holders, 2% is added to the charity wallet, 1% to the marketing wallet' \
               'and 5% to the liquidity pool, creating price support and stability.\n\n' \
@@ -53,45 +59,97 @@ shillreddit = 'Samari finance | Charity platform, 1 day old, 1k holders, and dev
               'Charity & Marketing contract: https://bscscan.com/address/0xf56846f6a95ef3ab07b048940df054b5eb842ca1\n' \
               'Team & Burn: https://bscscan.com/token/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be?a=0x2d045410f002a95efcee67759a92518fa3fce677\n' \
               '\n▶️ LINKS:\n🧿 Contract Address: https://bscscan.com/address/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' \
-              '🌍 Website: Samari.Finance\n' \
+              '🌍 Website: https://Samari.finance\n' \
               '📱 Telegram: t.me/SamariFinance\n' \
               '🕊️ Twitter: twitter.com/SamariFinance\n' \
               '🥞 PancakeSwap: https://exchange.pancakeswap.finance/#/swap?outputCurrency=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be \n' \
               '💩 PooCoin: https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n'
-shillist = '\n@uniswaptalk''\n@gemcollectors''\n@cryptoM00NShots''\n@gemdiscussion''\n@gemtalkc''\n@rocketmangem''\n@dexgemschat''\n@moonhunters''\n@uniswapresearch''\n@infinitygainzz''\n@InfinityBotz''\n@tehMoonwalkeRs''\n@uniswaplegit -''\n@uniswapgemtargets -''\n@acmecrypto -''\n@cryptomindsgroup -''\n@oddgemsfamilia -''\n@thegemhunterstg -''\n@GoodFellas_Cryptopicks -''\n@BitSquad -''\n@themoonboyschat -''\n@Farmingroom -''\n@uniswapgemspumpz''\n@Pumpchads''\n@BitSquad''\n@WhalersClub101''\n@uniswapresearch''\n@Uniswapelite''\n@uniswapone''\n@Uniswapchina''\n@UniswapOTCexchange''\n@shitcoincz''\n@gemcollectors''\n@Satoshi_club''\n@gemcollectors''\n@shitcoincz''\n@CryptoVIPSignalTA''\n@uniswap_gem_alerts''\n@mrsjenny''\n@binancedextrading''\n@Cryptosupportservices''\n@uniswapgem123''\n@DeFiRaccoons''\n@uniswapunofficial''\n@CryptoFamilyGroup''\n@CryproPriceTalks''\n@UniswapEarlyCalls''\n@elliotradescrypto''\n@TradeCoinUnderGround''\n@uniswapgemsv2''\n@DevoToken''\n@gemsfordegensgroup''\n@uniswaptalk''\n@crypto_revolution1''\n\nHere is your shill list''\n@BitSquad''\n@WhalersClub101''\n@uniswapresearch''\n@Uniswapelite''\n@uniswapone''\n@Uniswapchina''\n@UniswapOTCexchange''\n@shitcoincz''\n@gemcollectors''\n@Satoshi_club''\n@gemcollectors''\n@shitcoincz''\n@CryptoVIPSignalTA''\n@uniswap_gem_alerts''\n@binancedextrading''\n@Cryptosupportservices''\n@uniswapgem123''\n@DeFiRaccoons''\n@uniswapunofficial''\n@CryptoFamilyGroup''\n@cryptopricetalks''\n@UniswapEarlyCalls''\n@elliotradescrypto''\n@TradeCoinUnderGround''\n\nHere\'s the complete list of Telegram channels for shilling:''\n@illuminatiGem''\n@overdose_gems_group''\n@SuicidalPumpGroup''\n@elliotradescrypto''\n@dexgemschat''\n@GemSnipers''\n@uniswapgemspumpz''\n@defisearch''\n@InfinityGainzz''\n@gemcollectors''\n@cryptodakurobinhooders''\n@moonhunters''\n@unigemchatz''\n@supergemhunter''\n@themoonboyschat''\n@UniswapGemGroup''\n@Uniswap_Gem_Dicuss''\n@jumpsquad''\n@BitSquad''\n@WhalersClub101''\n@uniswapresearch''\n@Uniswapelite''\n@uniswapone''\n@Uniswapchina''\n@UniswapOTCexchange''\n@shitcoincz''\n@Satoshi_club''\n@CryptoVIPSignalTA''\n@uniswap_gem_alerts''\n@mrsjenny''\n@binancedextrading''\n@Cryptosupportservices''\n@uniswapgem123''\n@DeFiRaccoons''\n@uniswapunofficial''\n@CryptoFamilyGroup''\n@CryproPriceTalks''\n@UniswapEarlyCalls''\n@TradeCoinUnderGround''\n@uniswapgemsv2''\n@defigemchat''\n@sgdefi''\n@The_Trading_Pit''\n@uniswapgemtargets''\n@de_fi''\n@deficrew'
 commands = {
-    "start": '(still in development)\nHeya, I\'m your local Samaritan ❤️ Available commands:\n'
-             '\nGeneral:\n'
-             '/commands - list of all commands\n'
-             '/website - Samari.finance\n'
-             '/chart - Poocoin chart\n'
-             '/price - current price on PancakeSwap\n'
-             '/marketcap or /mc - current marketcap of $SAMA\n'
-             '\nShilling:\n'
-             '/shillist - list of places to shill\n'
-             '/shill or /shillin - templates for shilling on different platforms\n'
-             '/shillreddit - template for reddit shill\n'
-             '/shilltelegram or /shilltg - template for shill on Telegram\n'
-             '/shilltwitter - template for twitter shill\n',
-    "website": '[Samari\.finance](https://Samari.finance)',
-    "contract": 'https://bscscan.com/address/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
-    "socials": '🌐 Website: https://Samari.finance\n'
-               '🐦 Twitter: https://twitter.com/SamariFinance\n'
-               '📱 Telegram: https://t.me/SamariFinanec\n'
-               '🎮 Discord: https://discord.gg/557bPEUB\n',
-    "chart": 'https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
-    "trade": 'https://exchange.pancakeswap.finance/#/swap?outputCurrency=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
-    "price": 'Live price has not been implemented yet, sorry',  # todo
-    "mc": 'Live market cap has not been implemented yet, sorry',  # todo
-    "shillist": shillist,
-    "too_fast": 'Check this [message](https://t.me/c',
-    "shillin": 'Available versions of shill are available:\n'
-               '/shillreddit\n'
-               '/shilltelegram or /shilltg\n'
-               '/shilltwitter',
-    "shillreddit": shillreddit,
-    "shilltelegram": shilltg,  # todo
-    "shilltwitter": 'Samari.finance, brand new charity based token with 1k holders, doxxed devs, '
-                    'influencers from Instagram and YouTube planned for TONIGHT #SamariFinance',
-    "lp": 'Locked on [DxSale](https://dxsale.app/app/pages/dxlockview?id=0&add=0x1F79B8aef7854D86e2cC89Ada44CB95a33cd72Cf&type=lplock&chain=BSC)',
+    "start": {'text': '(still in development)\nHeya, I\'m your local Samaritan ❤️ Available commands:\n'
+                      '\nGeneral:\n'
+                      '/commands - list of all commands\n'
+                      '/website - Samari.finance\n'
+                      '/chart - Poocoin chart\n'
+                      '/price - current price on PancakeSwap\n'
+                      '/marketcap or /mc - current marketcap of $SAMA\n'
+                      '\nShilling:\n'
+                      '/shillist - list of places to shill\n'
+                      '/shill or /shillin - templates for shilling on different platforms\n'
+                      '/shillreddit - template for reddit shill\n'
+                      '/shilltelegram or /shilltg - template for shill on Telegram\n'
+                      '/shilltwitter - template for twitter shill\n',
+              'type': 'command',
+              'aliases': ['start', 'help']},
+    "website": {'text': '[Samari\\.finance](https://Samari.finance)',
+                'regex': ['website'],
+                'type': 'command',
+                'parse_mode': MARKDOWN_V2},
+    "contract": {'text': 'https://bscscan.com/address/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
+                 'disable_web_page_preview': True,
+                 'regex': ['contract', 'sc']},
+    "socials": {'text': '🌐 Website: https://Samari.finance\n'
+                        '🐦 Twitter: https://twitter.com/SamariFinance\n'
+                        '📱 Telegram: https://t.me/SamariFinanec\n'
+                        '🎮 Discord: https://discord.gg/557bPEUB\n'},
+    "chart": {'text': 'https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
+              'regex': ['chart']},
+    "trade": {'text': 'https://exchange.pancakeswap.finance/#/swap?outputCurrency'
+                      '=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
+              'regex': ['pcs', 'pancakeswap'],
+              'aliases': ['trade', 'buy']},
+    "price": {'text': 'Live price has not been implemented yet, sorry'},  # todo
+    "mc": {'text': 'Live market cap has not been implemented yet, sorry',
+           'aliases': ['mc', 'marketcap']},  # todo
+    "shillist": {'text': '\n@uniswaptalk\n@gemcollectors\n@cryptoM00NShots\n@gemdiscussion\n@gemtalkc\n@rocketmangem'
+                          '\n@dexgemschat\n@moonhunters\n@uniswapresearch\n@infinitygainzz\n@InfinityBotz'
+                          '\n@tehMoonwalkeRs\n@uniswaplegit\n@uniswapgemtargets\n@acmecrypto\n@cryptomindsgroup'
+                          '\n@oddgemsfamilia\n@thegemhunterstg\n@GoodFellas_Cryptopicks\n@BitSquad\n@themoonboyschat'
+                          '\n@Farmingroom\n@uniswapgemspumpz\n@Pumpchads\n@BitSquad\n@WhalersClub101\n@uniswapresearch'
+                          '\n@Uniswapelite\n@uniswapone\n@Uniswapchina\n@UniswapOTCexchange\n@shitcoincz'
+                          '\n@gemcollectors\n@Satoshi_club\n@gemcollectors\n@shitcoincz\n@CryptoVIPSignalTA'
+                          '\n@uniswap_gem_alerts\n@mrsjenny\n@binancedextrading\n@Cryptosupportservices\n@uniswapgem123'
+                          '\n@DeFiRaccoons\n@uniswapunofficial\n@CryptoFamilyGroup\n@CryproPriceTalks'
+                          '\n@UniswapEarlyCalls\n@elliotradescrypto\n@TradeCoinUnderGround\n@uniswapgemsv2\n@DevoToken'
+                          '\n@gemsfordegensgroup\n@uniswaptalk\n@crypto_revolution1\n\nHere is your shill list'
+                          '\n@BitSquad\n@WhalersClub101\n@uniswapresearch\n@Uniswapelite\n@uniswapone\n@Uniswapchina'
+                          '\n@UniswapOTCexchange\n@shitcoincz\n@gemcollectors\n@Satoshi_club\n@gemcollectors'
+                          '\n@shitcoincz\n@CryptoVIPSignalTA\n@uniswap_gem_alerts\n@binancedextrading'
+                          '\n@Cryptosupportservices\n@uniswapgem123\n@DeFiRaccoons\n@uniswapunofficial'
+                          '\n@CryptoFamilyGroup\n@cryptopricetalks\n@UniswapEarlyCalls\n@elliotradescrypto'
+                          '\n@TradeCoinUnderGround\n\nHere\'s the complete list of Telegram channels for shilling:'
+                          '\n@illuminatiGem\n@overdose_gems_group\n@SuicidalPumpGroup\n@elliotradescrypto'
+                          '\n@dexgemschat\n@GemSnipers\n@uniswapgemspumpz\n@defisearch\n@InfinityGainzz\n@gemcollectors'
+                          '\n@cryptodakurobinhooders\n@moonhunters\n@unigemchatz\n@supergemhunter\n@themoonboyschat'
+                          '\n@UniswapGemGroup\n@Uniswap_Gem_Dicuss\n@jumpsquad\n@BitSquad\n@WhalersClub101'
+                          '\n@uniswapresearch\n@Uniswapelite\n@uniswapone\n@Uniswapchina\n@UniswapOTCexchange'
+                          '\n@shitcoincz\n@Satoshi_club\n@CryptoVIPSignalTA\n@uniswap_gem_alerts\n@mrsjenny'
+                          '\n@binancedextrading\n@Cryptosupportservices\n@uniswapgem123\n@DeFiRaccoons'
+                          '\n@uniswapunofficial''\n@CryptoFamilyGroup\n@CryproPriceTalks\n@UniswapEarlyCalls'
+                          '\n@TradeCoinUnderGround\n@uniswapgemsv2\n@defigemchat\n@sgdefi\n@The_Trading_Pit'
+                          '\n@uniswapgemtargets\n@de_fi\n@deficrew',
+                 'type': 'timed',
+                 'delay': 1800},
+    "too_fast": {'text': 'Check this [message](https://t.me/c',
+                 'type': 'util',
+                 'parse_mode': MARKDOWN_V2},
+    "shillin": {'text': 'Available versions of shill are available:\n'
+                        '/shillreddit\n'
+                        '/shilltelegram or /shilltg\n'
+                        '/shilltwitter',
+                'aliases': ['shillin', 'shill']},
+    "shillreddit": {'text': shillreddit,
+                    'parse_mode': MARKDOWN_V2,
+                    'type': 'timed',
+                    'delay': 600},
+    "shilltelegram": {'text': shilltg,
+                      'aliases': ['shilltg', 'shilltelegram']},
+    "shilltwitter": {'text': 'Samari.finance, charity platform with 1k holders, doxxed devs, '
+                             'marketing roadmap, actual products coming up #SamariFinance'},  # todo
+    "lp": {'text': 'Locked on [DxSale](https://dxsale.app/app/pages/dxlockview?id=0&add'
+                   '=0x1F79B8aef7854D86e2cC89Ada44CB95a33cd72Cf&type=lplock&chain=BSC)',
+           'regex': ['lp locked', 'liquidity locked', 'locked', 'lp'],
+           'parse_mode': MARKDOWN_V2,
+           'disable_web_page_preview': True},
+    "version": {'text': 'V2',
+                'regex': ['version', 'v1', 'v2']}
 }
