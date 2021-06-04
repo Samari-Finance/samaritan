@@ -4,17 +4,16 @@ from core.bitquery import run_query
 class GraphQLClient:
 
     def __init__(self):
-        sama_addr = '0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be'
+        self.sama_addr = '0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be'
 
-    @staticmethod
-    def q_price():
+    def q_price(self):
         query = f"""
             query{{
                 ethereum(network: bsc) {{
                     dexTrades(
                       options: {{limit: 1, desc: "block.height"}}
                       exchangeName: {{is: "Pancake v2"}}
-                      baseCurrency: {{is: "0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be"}}
+                      baseCurrency: {{is: {self.sama_addr}}}
                     ) {{
                       transaction {{
                         hash
