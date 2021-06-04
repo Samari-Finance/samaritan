@@ -65,7 +65,7 @@ shillreddit = 'Samari finance | Charity platform, 1k holders, devs are doxxed\n'
               '🥞 PancakeSwap: https://exchange.pancakeswap.finance/#/swap?outputCurrency=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be \n' \
               '💩 PooCoin: https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n'
 commands = {
-    "start": {'text': '(still in development)\nHeya, I\'m your local Samaritan ❤️ Available commands:\n'
+    "start": {'text': 'Heya, I\'m your local Samaritan ❤️ \nAvailable commands:\n'
                       '\nGeneral:\n'
                       '/commands - list of all commands\n'
                       '/website - Samari.finance\n'
