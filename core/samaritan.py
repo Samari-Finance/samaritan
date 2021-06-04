@@ -3,16 +3,31 @@ import re
 from datetime import datetime, timedelta
 from functools import wraps
 
-import telegram
-from telegram import Update, ChatMember, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler, MessageHandler, \
-    Filters
-from telegram.utils.helpers import DEFAULT_NONE
+from telegram import (
+    Update,
+    ChatMember,
+    ChatPermissions,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup, Message
+)
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    CallbackContext,
+    ChatMemberHandler,
+    MessageHandler,
+    Filters, CallbackQueryHandler
+)
+from telegram.utils.helpers import (
+    DEFAULT_NONE,
+    create_deep_linked_url
+)
 
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
 from core.utils import read_api, send_message, MARKDOWN_V2, build_menu
 
+# Constants used for incoming member updates
 KICKED = ChatMember.KICKED
 LEFT = ChatMember.LEFT
 MEMBER = ChatMember.MEMBER
@@ -20,7 +35,12 @@ ADMIN = ChatMember.ADMINISTRATOR
 RESTRICTED = ChatMember.RESTRICTED
 CREATOR = ChatMember.CREATOR
 
+# Default delay for timed attributes
 DEFAULT_DELAY = timedelta(seconds=30)
+
+# Just captcha
+CAPTCHA = 'captcha'
+CAPTCHA_CALLBACK = 'completed'
 
 
 class Samaritan:
@@ -216,8 +236,25 @@ class Samaritan:
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
+    def captcha_deeplink(self, up: Update, ctx: CallbackContext):
+        url = f'https://t.me/samaritantestt?captcha=completed'
+        button_list = [InlineKeyboardButton(text="Click me to confirm you're a human!", url=url)]
+        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
+        send_message(up, ctx,
+                     text='Welcome to the Samaritan family ❤️ Click below to return to the chat:',
+                     reply_markup=reply_markup)
+        up.callback_query.answer()
+
+    def captcha_callback(self, up: Update, ctx: CallbackContext):
+        payload = ctx.args
+        print('payload')
+        if payload.count('completed') > 0:
+            send_message(up, ctx, f'Welcome {up.effective_user}! enter /commands to read all commands')
+
     def add_handles(self, dp):
+        dp.add_handler(CommandHandler('start', self.captcha_deeplink, Filters.regex(CAPTCHA), pass_args=True))
         self.set_dp_handlers(dp)
+        dp.add_handler(CallbackQueryHandler(self.captcha_callback, pattern=CAPTCHA_CALLBACK))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(ChatMemberHandler(
@@ -261,7 +298,7 @@ class Samaritan:
         return inner
 
 
-def regex_req(msg: telegram.Message):
+def regex_req(msg: Message):
     return len(msg.text.split()) < 4
 
 
