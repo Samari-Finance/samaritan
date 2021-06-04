@@ -57,6 +57,9 @@ class MongoConn:
             text = self.default_handlers.find_one({'_id': key})['text']
         return text
 
+    def get_admins(self):
+        return self.admins.find()
+
     def set_handler_description(self, command: str, description: str):
         self._upsert_handler(command, 'delay', description)
 
@@ -79,6 +82,7 @@ class MongoConn:
         self.members = self.db['members']
         self.handlers = self.db['handlers']
         self.default_handlers = self.db['default_handlers']
+        self.admins = self.db['admins']
         self.set_default_handlers()
 
     def _init_conn(self, path):
