@@ -37,6 +37,7 @@ def send_message(update: Update, context: CallbackContext, text: str, parse_mode
                                     disable_notification=disable_notification,
                                     reply_markup=reply_markup)
 
+
 def build_menu(
     buttons: List[InlineKeyboardButton],
     n_cols: int,
@@ -49,3 +50,4 @@ def build_menu(
     if footer_buttons:
         menu.append(footer_buttons if isinstance(footer_buttons, list) else [footer_buttons])
     return menu
+
