@@ -1,21 +1,24 @@
 import logging
 import re
 from datetime import datetime, timedelta
+from functools import wraps
 
 import telegram
-from telegram import Update, ChatMember
+from telegram import Update, ChatMember, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackContext, ChatMemberHandler, MessageHandler, \
     Filters
 from telegram.utils.helpers import DEFAULT_NONE
 
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
-from core.utils import read_api, send_message, MARKDOWN_V2
+from core.utils import read_api, send_message, MARKDOWN_V2, build_menu
 
 KICKED = ChatMember.KICKED
 LEFT = ChatMember.LEFT
 MEMBER = ChatMember.MEMBER
 ADMIN = ChatMember.ADMINISTRATOR
+RESTRICTED = ChatMember.RESTRICTED
+CREATOR = ChatMember.CREATOR
 
 DEFAULT_DELAY = timedelta(seconds=30)
 
@@ -143,6 +146,7 @@ class Samaritan:
         if update.chat_member.new_chat_member and update.chat_member.old_chat_member:
             new_status = update.chat_member.new_chat_member.status
             old_status = update.chat_member.old_chat_member.status
+            print(f'statuses: {new_status}, {old_status}')
             if self.evaluate_membership(new_status, old_status)[1]:
                 print('evaluated left')
                 self.left_member(update, context)
@@ -151,12 +155,25 @@ class Samaritan:
                 self.new_member(update, context)
 
     def new_member(self, update: Update, context: CallbackContext):
+        context.bot.restrict_chat_member(chat_id=update.effective_chat.id,
+                                         user_id=update.effective_user.id,
+                                         permissions=ChatPermissions(can_send_messages=False))
+        self.request_captcha(update, context)
+
         if update.chat_member.invite_link:
             link = update.chat_member.invite_link.invite_link
             self.db.set_new_ref(link, update.effective_user.id)
 
     def left_member(self, update: Update, context: CallbackContext):
         self.db.remove_ref(user_id=update.effective_user.id)
+
+    def request_captcha(self, up: Update, ctx: CallbackContext):
+        print('requesting captcha')
+        url = f'https://t.me/{ctx.bot.username}?start=captcha'
+        print(url)
+        button_list = [InlineKeyboardButton(text="Click Me!", url=url)]
+        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
+        send_message(up, ctx, text='Please complete the captcha!', reply_markup=reply_markup)
 
     def leaderboard(self, update: Update, context: CallbackContext):
         limit = 10
@@ -172,13 +189,13 @@ class Samaritan:
                 if limit > 50:
                     limit = 50
             for member in scoreboard[:limit]:
-                msg += f'{counter}. with {member["pts"]} {"pts:":<10}' \
-                       f'{chat.get_member(member["id"]).user.name}\n'
+                msg += f'{str(counter)+".":<3} {chat.get_member(member["id"]).user.name:<20} with {member["pts"]} {"pts"}\n' \
+
                 counter += 1
 
             caller = next((x for x in scoreboard if x['id'] == user.id))
             if caller:
-                msg += f'\nYour score: {scoreboard.index(caller)+1}. with {caller["pts"]} {"pts":<10}'
+                msg += f'\nYour score: {scoreboard.index(caller)+1}. with {caller["pts"]:<3} {"pts"}'
             send_message(update, context, msg, disable_notification=True)
 
         except ValueError:
@@ -189,9 +206,9 @@ class Samaritan:
         just_joined = False
         just_left = False
 
-        if (old == KICKED or old == LEFT) and new == MEMBER:
+        if (old == KICKED or old == LEFT or old == RESTRICTED) and (new == MEMBER or new == RESTRICTED):
             just_joined = True
-        elif (old == MEMBER) and (new == LEFT or new == KICKED):
+        elif (old == MEMBER | old == RESTRICTED) and (new == LEFT or new == KICKED):
             just_left = True
 
         return just_joined, just_left
@@ -230,6 +247,18 @@ class Samaritan:
             Filters.regex(re.compile(r'chart\??', re.IGNORECASE)),
             self.chart_regex
         ))
+
+    def _wrap_method(self, method):  # Wrapper called in case of a method
+        @wraps(method)
+        def inner(self_inner, *args, **kwargs):  # `self` is the *inner* class' `self` here
+            user_id = args[0].effective_user.id  # args[0]: update
+            if user_id not in self.db.get_admins:
+                print(f'Unauthorized access denied on {method.__name__} '
+                      f'for {user_id} : {args[0].message.chat.username}.')
+                args[0].message.reply_text('You do not have the required permissions to access this command')
+                return None  # quit handling command
+            return method(self_inner, *args, **kwargs)
+        return inner
 
 
 def regex_req(msg: telegram.Message):
