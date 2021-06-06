@@ -137,6 +137,10 @@ def build_menu(
     return menu
 
 
+def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
+    return f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)}'
+
+
 def regex_req(msg: Message, req_len=4):
     """Regex requirement for regex handlers
 
