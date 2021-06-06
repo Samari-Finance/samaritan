@@ -47,6 +47,7 @@ class Samaritan:
         self.updater = Updater(token=read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
         self.db = MongoConn(read_api(db_path))
+        self.challenger = Challenger(self.db)
         self.add_handles(self.dispatcher)
 
     def gen_handler_attr(self):
@@ -101,7 +102,7 @@ class Samaritan:
             'regex': MessageHandler,
         }
         for key in self.db.default_handlers.find():
-            if key['type'] == 'util':
+            if key['type'] == 'util' or key['type'] == 'captcha':
                 continue
             handler_type = resolvers[key['type']]
             dp.add_handler(handler_type(key['aliases'], getattr(self, f"_handler_{key['_id']}")))
@@ -226,7 +227,7 @@ class Samaritan:
 
     def request_captcha(self, up: Update, ctx: CallbackContext):
         print('requesting captcha')
-        url = f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)[4:]}'
+        url = f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)}'
         print(url)
         button_list = [InlineKeyboardButton(text="Click Me!", url=url)]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
@@ -239,23 +240,25 @@ class Samaritan:
         chat_id = ctx.args[0].split('_')[-1]
         url = f'https://t.me/samaritantestt'
         callback = f'completed_{chat_id}'
-        print(f'callback: {callback}')
-        button_list = [InlineKeyboardButton(text="Click me to confirm you're a human!",
-                                            callback_data=callback)]
-        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
-        send_message(up, ctx,
-                     text='Welcome to the Samaritan family ❤️ Click below to return to the chat:',
-                     reply_markup=reply_markup)
+
+        img, reply_markup = self.challenger.challenge_to_buttons()
+
+        send_image(up,
+                   ctx,
+                   img=img,
+                   caption=self.db.get_text_by_handler('captcha_challenge'),
+                   reply_markup=reply_markup,
+                   reply=False)
 
     def captcha_callback(self, up: Update, ctx: CallbackContext):
-        payload = ctx.args
-
+        payload = up.callback_query.data
+        chat_id = payload.split('_')[-1]
         print(f'payload: {payload}')
         if len(payload) > 0:
-            ctx.bot.restrict_chat_member(chat_id=up.effective_chat.id,
+            ctx.bot.restrict_chat_member(chat_id=chat_id,
                                          user_id=up.effective_user.id,
-                                         permissions=ChatPermissions(can_send_messages=True))
-            send_message(up, ctx, f'Welcome {up.effective_user}! enter /commands to read all commands')
+                                         permissions=MEMBER_PERMISSIONS)
+            send_message(up, ctx, f'Welcome {up.effective_user.id}! enter /commands to read all commands')
 
     def add_handles(self, dp):
         dp.add_handler(CommandHandler('start',
