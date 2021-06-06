@@ -153,5 +153,7 @@ commands = {
     "version": {'text': 'V2',
                 'regex': ['version', 'v1', 'v2']},
     "captcha_challenge": {'text': '👇 Enter the correct answer below 👇',
-                          'type': 'captcha'}
+                          'type': 'captcha'},
+    "captcha_failed": {'text': 'Incorrect answer. Try again! ',
+                       'type': 'captcha'},
 }
