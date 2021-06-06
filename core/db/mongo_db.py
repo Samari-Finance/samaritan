@@ -51,10 +51,12 @@ class MongoConn:
                                              }}, upsert=True)
 
     def get_text_by_handler(self, key: str):
-        text = self.handlers.find_one({'_id': key})['text']
+        # text = self.handlers.find_one({'_id': key})
+        #if text:
+        #    text = text['text']
 
-        if not text:
-            text = self.default_handlers.find_one({'_id': key})['text']
+        #if not text:
+        text = self.default_handlers.find_one({'_id': key})['text']
         return text
 
     def get_admins(self):
