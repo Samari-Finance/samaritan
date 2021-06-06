@@ -157,16 +157,15 @@ class Samaritan:
                      text=f'Here is your personal invite link: {link}')
 
     def member_updated(self, update: Update, context: CallbackContext):
-        print(f'is member: {update.chat_member.new_chat_member.is_member}')
         if update.chat_member.new_chat_member and update.chat_member.old_chat_member:
             new_member = update.chat_member.new_chat_member
             old_member = update.chat_member.old_chat_member
             if self.evaluate_membership(new_member, old_member)[1]:
-                print('evaluated left')
                 self.left_member(update, context)
             elif self.evaluate_membership(new_member, old_member)[0]:
-                print('evaluated joined')
                 self.new_member(update, context)
+        elif update.chat_member.new_chat_member and not update.chat_member.old_chat_member:
+            self.new_member(update, context)
 
     def new_member(self, update: Update, context: CallbackContext):
         context.bot.restrict_chat_member(chat_id=update.effective_chat.id,
