@@ -27,13 +27,20 @@ from telegram.utils.helpers import (
     DEFAULT_NONE,
 )
 
-from core import DEFAULT_DELAY, MARKDOWN_V2, MEMBER_PERMISSIONS
+from core import (
+    DEFAULT_DELAY,
+    MARKDOWN_V2,
+    MEMBER_PERMISSIONS
+)
 from core.captcha.challenger import Challenger
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
 from core.utils import (
     read_api,
-    build_menu, send_message, regex_req, send_image
+    build_menu,
+    send_message,
+    regex_req,
+    send_image, gen_captcha_request_deeplink
 )
 
 
@@ -226,12 +233,15 @@ class Samaritan:
         return just_joined, just_left
 
     def request_captcha(self, up: Update, ctx: CallbackContext):
-        print('requesting captcha')
-        url = f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)}'
-        print(url)
-        button_list = [InlineKeyboardButton(text="Click Me!", url=url)]
+        url = gen_captcha_request_deeplink(up, ctx)
+        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
-        send_message(up, ctx, text='Please complete the captcha!', reply_markup=reply_markup)
+        send_message(
+            text=self.db.get_text_by_handler('captcha_init'),
+            reply_markup=reply_markup,
+            update=up,
+            context=ctx)
+
 
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
