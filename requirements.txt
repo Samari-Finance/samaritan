@@ -3,3 +3,4 @@ graphene
 requests
 pymongo
 dnspython
+pillow
