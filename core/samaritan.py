@@ -39,9 +39,8 @@ CREATOR = ChatMember.CREATOR
 DEFAULT_DELAY = timedelta(seconds=30)
 
 # Just captcha
-CAPTCHA = 'captcha'
-CAPTCHA_CALLBACK = 'completed'
-
+CAPTCHA_CALLBACK_PREFIX = 'completed'
+CAPTCHA_PREFIX = 'captcha'
 
 class Samaritan:
 
@@ -163,14 +162,14 @@ class Samaritan:
                      text=f'Here is your personal invite link: {link}')
 
     def member_updated(self, update: Update, context: CallbackContext):
+        print(f'is member: {update.chat_member.new_chat_member.is_member}')
         if update.chat_member.new_chat_member and update.chat_member.old_chat_member:
-            new_status = update.chat_member.new_chat_member.status
-            old_status = update.chat_member.old_chat_member.status
-            print(f'statuses: {new_status}, {old_status}')
-            if self.evaluate_membership(new_status, old_status)[1]:
+            new_member = update.chat_member.new_chat_member
+            old_member = update.chat_member.old_chat_member
+            if self.evaluate_membership(new_member, old_member)[1]:
                 print('evaluated left')
                 self.left_member(update, context)
-            elif self.evaluate_membership(new_status, old_status)[0]:
+            elif self.evaluate_membership(new_member, old_member)[0]:
                 print('evaluated joined')
                 self.new_member(update, context)
 
@@ -186,14 +185,6 @@ class Samaritan:
 
     def left_member(self, update: Update, context: CallbackContext):
         self.db.remove_ref(user_id=update.effective_user.id)
-
-    def request_captcha(self, up: Update, ctx: CallbackContext):
-        print('requesting captcha')
-        url = f'https://t.me/{ctx.bot.username}?start=captcha'
-        print(url)
-        button_list = [InlineKeyboardButton(text="Click Me!", url=url)]
-        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
-        send_message(up, ctx, text='Please complete the captcha!', reply_markup=reply_markup)
 
     def leaderboard(self, update: Update, context: CallbackContext):
         limit = 10
@@ -222,43 +213,66 @@ class Samaritan:
             send_message(update, context, f'Invalid argument: {context.args} for leaderboard command')
 
     @staticmethod
-    def evaluate_membership(new, old):
+    def evaluate_membership(new_member, old_member):
+        old_status = old_member.status
+        new_status = new_member.status
+
         just_joined = False
         just_left = False
 
-        if (old == KICKED or old == LEFT or old == RESTRICTED) and (new == MEMBER or new == RESTRICTED):
-            just_joined = True
-        elif (old == MEMBER | old == RESTRICTED) and (new == LEFT or new == KICKED):
+        if new_member.is_member is False and old_member.is_member is True:
             just_left = True
+        elif new_member.is_member is True and old_member.is_member is False:
+            just_joined = True
 
         return just_joined, just_left
+
+    def request_captcha(self, up: Update, ctx: CallbackContext):
+        print('requesting captcha')
+        url = f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)[4:]}'
+        print(url)
+        button_list = [InlineKeyboardButton(text="Click Me!", url=url)]
+        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
+        send_message(up, ctx, text='Please complete the captcha!', reply_markup=reply_markup)
 
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
     def captcha_deeplink(self, up: Update, ctx: CallbackContext):
-        url = f'https://t.me/samaritantestt?captcha=completed'
-        button_list = [InlineKeyboardButton(text="Click me to confirm you're a human!", url=url)]
+        print(f'args: {ctx.args}')
+        chat_id = ctx.args[0].split('_')[-1]
+        print(chat_id)
+        url = f'https://t.me/samaritantestt'
+        callback = f'completed_{chat_id}'
+        print(f'callback: {callback}')
+        button_list = [InlineKeyboardButton(text="Click me to confirm you're a human!",
+                                            callback_data=callback)]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
         send_message(up, ctx,
                      text='Welcome to the Samaritan family ❤️ Click below to return to the chat:',
                      reply_markup=reply_markup)
-        up.callback_query.answer()
 
     def captcha_callback(self, up: Update, ctx: CallbackContext):
         payload = ctx.args
-        print('payload')
-        if payload.count('completed') > 0:
+
+        print(f'payload: {payload}')
+        if len(payload) > 0:
+            ctx.bot.restrict_chat_member(chat_id=up.effective_chat.id,
+                                         user_id=up.effective_user.id,
+                                         permissions=ChatPermissions(can_send_messages=True))
             send_message(up, ctx, f'Welcome {up.effective_user}! enter /commands to read all commands')
 
     def add_handles(self, dp):
-        dp.add_handler(CommandHandler('start', self.captcha_deeplink, Filters.regex(CAPTCHA), pass_args=True))
+        dp.add_handler(CommandHandler('start',
+                                      self.captcha_deeplink,
+                                      Filters.regex(r'captcha_([a-zA-Z0-9]*)'),
+                                      pass_args=True))
         self.set_dp_handlers(dp)
-        dp.add_handler(CallbackQueryHandler(self.captcha_callback, pattern=CAPTCHA_CALLBACK))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
+        dp.add_handler(CallbackQueryHandler(self.captcha_callback, pattern="completed_([a-zA-Z0-9]*)"))
         dp.add_handler(MessageHandler(
             Filters.regex(re.compile(r'v2\??')) |
             Filters.regex(re.compile(r'v1\??')),
@@ -290,7 +304,7 @@ class Samaritan:
         def inner(self_inner, *args, **kwargs):  # `self` is the *inner* class' `self` here
             user_id = args[0].effective_user.id  # args[0]: update
             if user_id not in self.db.get_admins:
-                print(f'Unauthorized access denied on {method.__name__} '
+                print(f'Unauthorized access denied on {method.__name__}'
                       f'for {user_id} : {args[0].message.chat.username}.')
                 args[0].message.reply_text('You do not have the required permissions to access this command')
                 return None  # quit handling command
