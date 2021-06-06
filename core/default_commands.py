@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from core.utils import MARKDOWN_V2
+from core import MARKDOWN_V2
 
 shilltg = '🌜 Samari is about to EXPLODE! 🌛\n' \
           'While charity alone is great, development focused on bringing utility will in the long run cause more ' \
@@ -151,5 +151,7 @@ commands = {
            'parse_mode': MARKDOWN_V2,
            'disable_web_page_preview': True},
     "version": {'text': 'V2',
-                'regex': ['version', 'v1', 'v2']}
+                'regex': ['version', 'v1', 'v2']},
+    "captcha_challenge": {'text': '👇 Enter the correct answer below 👇',
+                          'type': 'captcha'}
 }
