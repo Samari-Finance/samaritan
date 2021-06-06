@@ -51,12 +51,14 @@ class MongoConn:
                                              }}, upsert=True)
 
     def get_text_by_handler(self, key: str):
-        # text = self.handlers.find_one({'_id': key})
-        #if text:
-        #    text = text['text']
+        try:
+            text = self.handlers.find_one({'_id': key})['text']
+        except TypeError as e:
+            try:
+                text = self.default_handlers.find_one({'_id': key})['text']
+            except TypeError:
+                raise KeyError(f'key {key} does not exist in default handlers.')
 
-        #if not text:
-        text = self.default_handlers.find_one({'_id': key})['text']
         return text
 
     def get_admins(self):
