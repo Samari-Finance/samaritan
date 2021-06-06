@@ -211,6 +211,9 @@ class Samaritan:
         old_status = old_member.status
         new_status = new_member.status
 
+        print(f'old_status: {old_status}')
+        print(f'new_status: {new_status}')
+
         just_joined = False
         just_left = False
 
@@ -233,9 +236,7 @@ class Samaritan:
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
     def captcha_deeplink(self, up: Update, ctx: CallbackContext):
-        print(f'args: {ctx.args}')
         chat_id = ctx.args[0].split('_')[-1]
-        print(chat_id)
         url = f'https://t.me/samaritantestt'
         callback = f'completed_{chat_id}'
         print(f'callback: {callback}')
