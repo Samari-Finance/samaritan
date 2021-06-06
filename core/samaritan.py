@@ -1,3 +1,9 @@
+"""
+    Telegram bot for Samari.finance Telegram group using python-telegram-bot
+    @ https://github.com/python-telegram-bot/python-telegram-bot
+
+"""
+
 import logging
 import re
 from datetime import datetime, timedelta
@@ -5,7 +11,6 @@ from functools import wraps
 
 from telegram import (
     Update,
-    ChatMember,
     ChatPermissions,
     InlineKeyboardButton,
     InlineKeyboardMarkup, Message
@@ -20,20 +25,16 @@ from telegram.ext import (
 )
 from telegram.utils.helpers import (
     DEFAULT_NONE,
-    create_deep_linked_url
 )
 
+from core import DEFAULT_DELAY, MARKDOWN_V2, MEMBER_PERMISSIONS
+from core.captcha.challenger import Challenger
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
-from core.utils import read_api, send_message, MARKDOWN_V2, build_menu
-
-# Constants used for incoming member updates
-KICKED = ChatMember.KICKED
-LEFT = ChatMember.LEFT
-MEMBER = ChatMember.MEMBER
-ADMIN = ChatMember.ADMINISTRATOR
-RESTRICTED = ChatMember.RESTRICTED
-CREATOR = ChatMember.CREATOR
+from core.utils import (
+    read_api,
+    build_menu, send_message, regex_req, send_image
+)
 
 # Default delay for timed attributes
 DEFAULT_DELAY = timedelta(seconds=30)
