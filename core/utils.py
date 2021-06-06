@@ -7,6 +7,9 @@ from telegram import Update, InlineKeyboardButton, Message
 from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
 
+from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER
+from core.captcha.challenge import Challenge
+
 
 def send_message(update: Update, context: CallbackContext,
                  text: str,
@@ -138,7 +141,13 @@ def build_menu(
 
 
 def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
-    return f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)}'
+    deeplink = f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)}'
+    print(f'deeplink: {deeplink}')
+    return deeplink
+
+
+def gen_captcha_callback_query(up: Update, ch: Challenge):
+    return CAPTCHA_PREFIX+up.effective_user.id+CALLBACK_DIVIDER+ch.choices()
 
 
 def regex_req(msg: Message, req_len=4):
