@@ -306,10 +306,6 @@ class Samaritan:
         return inner
 
 
-def regex_req(msg: Message):
-    return len(msg.text.split()) < 4
-
-
 def setup_log(log_level):
     logging.basicConfig(level=log_level,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
