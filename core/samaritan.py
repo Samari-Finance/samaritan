@@ -36,12 +36,6 @@ from core.utils import (
     build_menu, send_message, regex_req, send_image
 )
 
-# Default delay for timed attributes
-DEFAULT_DELAY = timedelta(seconds=30)
-
-# Just captcha
-CAPTCHA_CALLBACK_PREFIX = 'completed'
-CAPTCHA_PREFIX = 'captcha'
 
 class Samaritan:
 
