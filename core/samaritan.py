@@ -30,7 +30,7 @@ from telegram.utils.helpers import (
 from core import (
     DEFAULT_DELAY,
     MARKDOWN_V2,
-    MEMBER_PERMISSIONS
+    MEMBER_PERMISSIONS, LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR
 )
 from core.captcha.challenger import Challenger
 from core.default_commands import commands
@@ -225,11 +225,19 @@ class Samaritan:
         just_joined = False
         just_left = False
 
-        if new_member.is_member is False and old_member.is_member is True:
-            just_left = True
-        elif new_member.is_member is True and old_member.is_member is False:
-            just_joined = True
+        if new_status == RESTRICTED or old_status == RESTRICTED:
+            if new_member.is_member is False and old_member.is_member is True:
+                just_left = True
+            elif new_member.is_member is True and old_member.is_member is False:
+                just_joined = True
+        elif old_status and new_status:
+            if (old_status == LEFT or old_status == KICKED) and (new_status == MEMBER or new_status == RESTRICTED):
+                just_joined = True
+            elif (old_status == MEMBER or old_status == ADMIN or old_status == CREATOR) and \
+                    (new_status == KICKED or new_status == LEFT):
+                just_left = True
 
+        print(f'just_joined: {just_joined}, just_left: {just_left}')
         return just_joined, just_left
 
     def request_captcha(self, up: Update, ctx: CallbackContext):
@@ -237,42 +245,17 @@ class Samaritan:
         button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
         send_message(
-            text=self.db.get_text_by_handler('captcha_init'),
+            text=self.captcha_text(up, ctx),
             reply_markup=reply_markup,
             update=up,
             context=ctx)
 
-
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
-    def captcha_deeplink(self, up: Update, ctx: CallbackContext):
-        chat_id = ctx.args[0].split('_')[-1]
-        url = f'https://t.me/samaritantestt'
-        callback = f'completed_{chat_id}'
-
-        img, reply_markup = self.challenger.challenge_to_buttons()
-
-        send_image(up,
-                   ctx,
-                   img=img,
-                   caption=self.db.get_text_by_handler('captcha_challenge'),
-                   reply_markup=reply_markup,
-                   reply=False)
-
-    def captcha_callback(self, up: Update, ctx: CallbackContext):
-        payload = up.callback_query.data
-        chat_id = payload.split('_')[-1]
-        print(f'payload: {payload}')
-        if len(payload) > 0:
-            ctx.bot.restrict_chat_member(chat_id=chat_id,
-                                         user_id=up.effective_user.id,
-                                         permissions=MEMBER_PERMISSIONS)
-            send_message(up, ctx, f'Welcome {up.effective_user.id}! enter /commands to read all commands')
-
     def add_handles(self, dp):
         dp.add_handler(CommandHandler('start',
-                                      self.captcha_deeplink,
+                                      self.challenger.captcha_deeplink,
                                       Filters.regex(r'captcha_([a-zA-Z0-9]*)'),
                                       pass_args=True))
         self.set_dp_handlers(dp)
@@ -280,7 +263,7 @@ class Samaritan:
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
-        dp.add_handler(CallbackQueryHandler(self.captcha_callback, pattern="completed_([a-zA-Z0-9]*)"))
+        dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([a-zA-Z0-9]*)"))
         dp.add_handler(MessageHandler(
             Filters.regex(re.compile(r'v2\??')) |
             Filters.regex(re.compile(r'v1\??')),
@@ -318,6 +301,11 @@ class Samaritan:
                 return None  # quit handling command
             return method(self_inner, *args, **kwargs)
         return inner
+
+    @staticmethod
+    def captcha_text(up: Update, ctx: CallbackContext):
+        return f"Welcome {up.effective_user.name} to Samari Finance ❤️\n" \
+               f"To participate in the chat, a captcha is required. Press below to continue 👇"
 
 
 def setup_log(log_level):
