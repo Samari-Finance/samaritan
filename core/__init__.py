@@ -26,12 +26,6 @@ CAPTCHA_CALLBACK_PREFIX = 'completed'
 CAPTCHA_PREFIX = 'captcha'
 CALLBACK_DIVIDER = '_'
 
-"""Callback query indexes
-"""
-PAYLOAD_CUID_INDEX = -1
-PAYLOAD_UUID_INDEX = -2
-PAYLOAD_ANS_INDEX = -3
-
 """Standard member permissions
 """
 MEMBER_PERMISSIONS = ChatPermissions(
