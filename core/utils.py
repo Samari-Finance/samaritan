@@ -58,7 +58,6 @@ def send_image(up: Update, ctx: CallbackContext,
                caption: str = None,
                parse_mode=DEFAULT_NONE,
                reply=True,
-               disable_web_page_preview=DEFAULT_NONE,
                disable_notification=False,
                reply_markup=None) -> Message:
     """Wrapper around telegram.bot.send_photo
@@ -74,8 +73,6 @@ def send_image(up: Update, ctx: CallbackContext,
     Default: None
     :param reply: whether if the outgoing message should be a reply.
     Default: True
-    :param disable_web_page_preview: whether to enable or disable web previews.
-    Default: None or False.
     :param disable_notification: whether to send the outgoing message as a silent notification.
     Default: True.
     :param reply_markup: Markups to send with the text (keyboard, buttons etc.)
@@ -141,7 +138,10 @@ def build_menu(
 
 
 def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
-    deeplink = f'https://t.me/{ctx.bot.username}?start=captcha_{str(up.effective_chat.id)}'
+    deeplink = f'https://t.me/{ctx.bot.username}?start=' \
+               f'{CAPTCHA_PREFIX+CALLBACK_DIVIDER}' \
+               f'{str(up.effective_chat.id)+CALLBACK_DIVIDER}' \
+               f'{str(up.chat_member.new_chat_member.user.id)}'
     print(f'deeplink: {deeplink}')
     return deeplink
 
