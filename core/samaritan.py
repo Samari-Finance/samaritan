@@ -177,7 +177,7 @@ class Samaritan:
 
     def new_member(self, update: Update, context: CallbackContext):
         context.bot.restrict_chat_member(chat_id=update.effective_chat.id,
-                                         user_id=update.effective_user.id,
+                                         user_id=update.chat_member.new_chat_member.user.id,
                                          permissions=ChatPermissions(can_send_messages=False))
         self.request_captcha(update, context)
 
@@ -263,7 +263,7 @@ class Samaritan:
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
-        dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([a-zA-Z0-9]*)"))
+        dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
         dp.add_handler(MessageHandler(
             Filters.regex(re.compile(r'v2\??')) |
             Filters.regex(re.compile(r'v1\??')),
@@ -304,8 +304,8 @@ class Samaritan:
 
     @staticmethod
     def captcha_text(up: Update, ctx: CallbackContext):
-        return f"Welcome {up.effective_user.name} to Samari Finance ❤️\n" \
-               f"To participate in the chat, a captcha is required. Press below to continue 👇"
+        return f"Welcome {up.effective_user.name}, to Samari Finance ❤️\n" \
+               f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
 
 
 def setup_log(log_level):
