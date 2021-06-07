@@ -20,7 +20,7 @@ shilltg = '🌜 Samari is about to EXPLODE! 🌛\n' \
           '👉 Sustainable tokenomics\n\n' \
           '💰 BUY $Samari (V2): https://exchange.pancakeswap.finance/#/swap?outputCurrency=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' \
           '📈 CHART (V2): https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' \
-          '🔒 LIQUIDITY Locked \n' \
+          '🔒 LIQUIDITY Locked: https://dxsale.app/app/pages/dxlockview?id=0&add\n' \
           '✅ VERIFIED CONTRACT: https://bscscan.com/token/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n'
 shillreddit = 'Samari finance | Charity platform, 1k holders, devs are doxxed\n' \
               'Welcome Samaritans!\n' \
@@ -156,4 +156,25 @@ commands = {
                           'type': 'captcha'},
     "captcha_failed": {'text': 'Incorrect answer. Try again! ',
                        'type': 'captcha'},
+    "captcha_complete": {'text': 'Congratulations, and welcome to the Samaritan family 💪\n\n'
+                                 '🌜 Why Samari? 🌛\n' 
+                                  'While charity alone is great, development focused on bringing utility will in the '
+                                  'long run cause more donations. At Samari we want to bring all the aspects of DEFI under one umbrella' 
+                                  ', to provide all living creatures in need a better future\n' 
+                                  'TELEGRAM & Twitter contests starting soon with prizes determined by CONTRACT FEES, ' 
+                                  'together with a 10 day campaign with KSI VIDEO EDITOR: MO SYED\n\n' 
+                                  'Join the SAMARITANS on TG \n' 
+                                  'TELEGRAM: t.me/SamariFinance\n' 
+                                  'WEBSITE: Samari.finance\n\n' 
+                                  '👉 Team doxxed\n' 
+                                  '👉 Active community\n' 
+                                  '👉 Charitable Organization\n' 
+                                  '👉 $100K MC at launch – stable liquidity, no p&d scheme\n' 
+                                  '👉 Sustainable tokenomics\n\n' 
+                                  '💰 BUY $Samari (V2): https://exchange.pancakeswap.finance/#/swap?outputCurrency=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' 
+                                  '📈 CHART (V2): https://poocoin.app/tokens/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n' 
+                                  '🔒 LIQUIDITY Locked: https://dxsale.app/app/pages/dxlockview?id=0&add\n' 
+                                  '✅ VERIFIED CONTRACT: https://bscscan.com/token/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n\n'
+                                 '👇 Return to the group 👇'
+                         }
 }
