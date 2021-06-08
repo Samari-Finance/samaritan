@@ -3,6 +3,7 @@ import os
 from io import BytesIO
 from typing import List, Union
 
+from PIL.Image import Image
 from telegram import Update, InlineKeyboardButton, Message
 from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
@@ -13,11 +14,13 @@ from core.captcha.challenge import Challenge
 
 def send_message(update: Update, context: CallbackContext,
                  text: str,
+                 chat_id=None,
                  parse_mode=DEFAULT_NONE,
                  reply=True,
                  disable_web_page_preview=DEFAULT_NONE,
                  disable_notification=False,
-                 reply_markup=None) -> Message:
+                 reply_markup=None,
+                 ) -> Message:
     """A wrapper around update.send_message
 
     :param chat_id: Chat to send message in
@@ -29,7 +32,6 @@ def send_message(update: Update, context: CallbackContext,
     :param disable_web_page_preview: Whether to enable or disable web previews
     :param disable_notification: Whether to send the outgoing message as a silent notification
     :param reply_markup: Markups to send with the text (keyboard, buttons etc.)
-    Default: None
 
     :return: The outgoing telegram.Message instance.
     """
@@ -38,7 +40,10 @@ def send_message(update: Update, context: CallbackContext,
         if update.message is not None:
             reply_to_msg_id = update.message.message_id
 
-    return context.bot.send_message(chat_id=update.effective_chat.id,
+    if not chat_id:
+        chat_id = update.effective_chat.id
+
+    return context.bot.send_message(chat_id=chat_id,
                                     text=text,
                                     parse_mode=parse_mode,
                                     reply_to_message_id=reply_to_msg_id,
@@ -48,7 +53,8 @@ def send_message(update: Update, context: CallbackContext,
 
 
 def send_image(up: Update, ctx: CallbackContext,
-               img,
+               img: Image,
+               chat_id=None,
                caption: str = None,
                parse_mode=DEFAULT_NONE,
                reply=True,
@@ -72,13 +78,19 @@ def send_image(up: Update, ctx: CallbackContext,
         if up.message is not None:
             reply_to_msg_id = up.message.message_id
 
-    bio = BytesIO()
-    bio.name = 'captcha.jpeg'
-    img.save(bio, 'JPEG')
-    bio.seek(0)
+    if not chat_id:
+        chat_id = up.effective_chat.id
 
-    return ctx.bot.sendPhoto(
-        chat_id=up.effective_chat.id,
+    if isinstance(img, Image):
+        bio = BytesIO()
+        bio.name = 'captcha.jpeg'
+        img.save(bio, 'JPEG')
+        bio.seek(0)
+    else:
+        bio = img
+
+    return ctx.bot.send_photo(
+        chat_id=chat_id,
         photo=bio,
         caption=caption,
         parse_mode=parse_mode,
@@ -133,10 +145,6 @@ def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
                f'{str(up.chat_member.new_chat_member.user.id)}'
     print(f'deeplink: {deeplink}')
     return deeplink
-
-
-def gen_captcha_callback_query(up: Update, ch: Challenge):
-    return CAPTCHA_PREFIX+up.effective_user.id+CALLBACK_DIVIDER+ch.choices()
 
 
 def regex_req(msg: Message, req_len=4):
