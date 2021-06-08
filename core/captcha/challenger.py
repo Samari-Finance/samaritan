@@ -8,7 +8,7 @@ from telegram.ext import CallbackContext
 from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, CAPTCHA_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
-from core.utils import build_menu, send_image, send_message
+from core.utils.utils import build_menu, send_image, send_message
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
 fill_color = [(64, 107, 76), (0, 87, 128), (0, 3, 82), (191, 0, 255), (72, 189, 0), (189, 107, 0), (189, 41, 0)]
