@@ -20,20 +20,14 @@ def send_message(update: Update, context: CallbackContext,
                  reply_markup=None) -> Message:
     """A wrapper around update.send_message
 
-    :param update: incoming telegram.Update.
-    Required.
-    :param context: associated telegram.bot.CallbackContext.
-    Required.
-    :param text: string to send, must be at least 1 character.
-    Required.
-    :param parse_mode: parse mode to send text, valid entries are 'html' or 'Markdown_v2'.
-    Default: None
-    :param reply: if the outgoing message should be a reply.
-    Default: True
-    :param disable_web_page_preview: whether to enable or disable web previews.
-    Default: None or False.
-    :param disable_notification: whether to send the outgoing message as a silent notification.
-    Default: True.
+    :param chat_id: Chat to send message in
+    :param update: Incoming telegram.Update
+    :param context: Associated telegram.bot.CallbackContext
+    :param text: String to send, must be at least 1 character
+    :param parse_mode: Parse mode to send text, valid entries are 'html' or 'Markdown_v2'
+    :param reply: If the outgoing message should be a reply
+    :param disable_web_page_preview: Whether to enable or disable web previews
+    :param disable_notification: Whether to send the outgoing message as a silent notification
     :param reply_markup: Markups to send with the text (keyboard, buttons etc.)
     Default: None
 
@@ -60,24 +54,18 @@ def send_image(up: Update, ctx: CallbackContext,
                reply=True,
                disable_notification=False,
                reply_markup=None) -> Message:
-    """Wrapper around telegram.bot.send_photo
+    """Wrapper around telegram.bot.send_photo for convenience
 
-    :param up: incoming telegram.Update
-    Required.
-    :param ctx: associated telegram.bot.CallbackContext
-    :param img: Image to send.
-    Required.
-    :param caption: string to caption the image with.
-    Default: None.
-    :param parse_mode: parse mode to send text, valid entries are 'html' or 'Markdown_v2'.
-    Default: None
-    :param reply: whether if the outgoing message should be a reply.
-    Default: True
-    :param disable_notification: whether to send the outgoing message as a silent notification.
-    Default: True.
+    :param up: Incoming telegram.Update
+    :param ctx: Associated telegram.bot.CallbackContext
+    :param chat_id: ID of chat to send image in. If not provided, the incoming update's effective chat_id is used.
+    :param img: Image to send
+    :param caption: String to caption the image with
+    :param parse_mode: Parse mode to send text, valid entries are 'html' or 'Markdown_v2'
+    :param reply: Whether if the outgoing message should be a reply
+    :param disable_notification: Whether to send the outgoing message as a silent notification
     :param reply_markup: Markups to send with the text (keyboard, buttons etc.)
-    Default: None
-    :return: returns the outgoing telegram.Message instance.
+    :return: The outgoing telegram.Message instance
     """
     reply_to_msg_id = None
     if reply:
@@ -102,9 +90,8 @@ def send_image(up: Update, ctx: CallbackContext,
 def read_api(api_key_file):
     """Searches project files for api key file
 
-    :param api_key_file: file name to search for
-
-    :return: content of the read file.
+    :param api_key_file: File name to search for
+    :return: Content of the read file.
     """
     if not os.path.exists(api_key_file):
         api_key_file = os.path.dirname(os.getcwd()) + '/' + api_key_file
@@ -122,12 +109,9 @@ def build_menu(
 
     :param buttons: Buttons to build.
     :param n_cols: number of columns
-    :param header_buttons: button to place at header placement
-    Default: None
-    :param footer_buttons: button to place at footer placement
-    Default: None
-
-    :return: the assembled button menu
+    :param header_buttons: Buttons to place at header placement
+    :param footer_buttons: Buttons to place at footer placement
+    :return: The assembled button menu
     """
     menu = [buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
     if header_buttons:
@@ -138,6 +122,11 @@ def build_menu(
 
 
 def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
+    """Generates a new captcha request deeplink based on incoming Update and bot.CallbackContext
+    :param up: Incoming telegram.Update
+    :param ctx: CallbackContext for bot
+    :return: Deeplink to private chat with bot for captcha request
+    """
     deeplink = f'https://t.me/{ctx.bot.username}?start=' \
                f'{CAPTCHA_PREFIX+CALLBACK_DIVIDER}' \
                f'{str(up.effective_chat.id)+CALLBACK_DIVIDER}' \
@@ -151,13 +140,11 @@ def gen_captcha_callback_query(up: Update, ch: Challenge):
 
 
 def regex_req(msg: Message, req_len=4):
-    """Regex requirement for regex handlers
+    """Regex requirement for regex handlers.
 
-    :param msg: telegram.Message instance to check for requirement fulfillment.
-    :param req_len: max length of the incoming message text.
-    Default: 4
-
-    :return bool: whether requirements is fulfilled.
+    :param msg: telegram.Message instance to check for requirement fulfillment
+    :param req_len: Max length of the incoming message text
+    :return bool: Whether requirement is fulfilled.
     """
     return len(msg.text.split()) < req_len
 
@@ -165,8 +152,7 @@ def regex_req(msg: Message, req_len=4):
 def pp_json(msg):
     """Pretty-printing json formatted strings.
 
-    :param msg: json-string to pretty print
-
+    :param msg: Json-string to pretty print
     :return: None
     """
     json_str = json.loads(msg)
