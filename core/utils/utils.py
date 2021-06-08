@@ -1,11 +1,12 @@
 import json
 import os
+import re
 from io import BytesIO
 from typing import List, Union
 
 from PIL.Image import Image
 from telegram import Update, InlineKeyboardButton, Message
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, Filters
 from telegram.utils.helpers import DEFAULT_NONE
 
 from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER
@@ -157,12 +158,16 @@ def regex_req(msg: Message, req_len=4):
     return len(msg.text.split()) < req_len
 
 
-def pp_json(msg):
-    """Pretty-printing json formatted strings.
+def gen_filter(aliases: list):
+    """Generates a regex expression based on a list of aliases
 
-    :param msg: Json-string to pretty print
-    :return: None
+    :param aliases: List of aliases to
+    :return: regex expression which has
     """
-    json_str = json.loads(msg)
-    print(json.dumps(json_str, indent=3))
+    expr = Filters.regex(re.compile(aliases[0]+r'?\?', re.IGNORECASE))
+    for alias in aliases[1:]:
+        expr = expr | Filters.regex(re.compile(alias+r'?\?', re.IGNORECASE))
+    print(expr)
+    return expr
+
 
