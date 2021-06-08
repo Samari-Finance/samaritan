@@ -206,10 +206,10 @@ class Samaritan:
 
                 counter += 1
 
-            caller = next((x for x in scoreboard if x['id'] == user.id))
+            caller = next((x for x in scoreboard if x['id'] == user.id), None)
             if caller:
                 msg += f'\nYour score: {scoreboard.index(caller)+1}. with {caller["pts"]:<3} {"pts"}'
-            send_message(update, context, msg, disable_notification=True)
+            send_message(update, context, msg, disable_notification=True, reply=False)
 
         except ValueError:
             send_message(update, context, f'Invalid argument: {context.args} for leaderboard command')
