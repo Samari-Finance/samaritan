@@ -1,18 +1,14 @@
 import random
-from typing import Any, Tuple, Type
 
-import PIL
 from PIL import Image, ImageFont
 from PIL import ImageDraw
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, InputFile
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, InputMediaPhoto
 from telegram.ext import CallbackContext
-from telegram.utils import types
-from telegram.utils.helpers import DEFAULT_NONE
 
-from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, CAPTCHA_PREFIX
+from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, CAPTCHA_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
-from core.utils import build_menu, send_image, send_message, pp_json
+from core.utils import build_menu, send_image, send_message
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
 fill_color = [(64, 107, 76), (0, 87, 128), (0, 3, 82), (191, 0, 255), (72, 189, 0), (189, 107, 0), (189, 41, 0)]
@@ -28,12 +24,13 @@ lines_max = int(11 * multiplier)
 points_min = int(11 * multiplier)
 points_max = int(50 * multiplier)
 
+MAX_ATTEMPTS = 4
+
 
 class Challenger:
 
     def __init__(self,
-                 db: MongoConn,
-                 ) -> None:
+                 db: MongoConn):
         self.db = db
         self.current_captchas = {}
 
@@ -49,19 +46,21 @@ class Challenger:
         payload = ctx.args[0].split(CALLBACK_DIVIDER)
         user_id = payload[2]
         ch = Challenge()
-        img, reply_markup = self.challenge_to_reply_markup(ch, ctx.args[0])
+        img, reply_markup = self.challenge_to_reply_markup(up, ctx, ch, ctx.args[0])
 
         msg = send_image(
             up,
             ctx,
             img=img,
-            caption=self.db.get_text_by_handler('captcha_challenge'),
+            caption=self.extend_captcha_caption(user_id),
+            parse_mode=MARKDOWN_V2,
             reply_markup=reply_markup,
             reply=False)
         print(f'user_id: {user_id}')
         self.current_captchas[user_id] = {
             "msg": msg,
-            "ch": ch
+            "ch": ch,
+            "attempts": 0,
         }
         for element in self.current_captchas.items():
             str(element)
@@ -81,17 +80,20 @@ class Challenger:
 
         for element in self.current_captchas.items():
             print(str(element))
-        print(f'answer: {ans} == {self.current_captchas[str(user_id)]["ch"].ans()} is {ans == self.current_captchas[str(user_id)]["ch"].ans()}')
-        if int(ans) == self.current_captchas[str(user_id)]['ch'].ans():
+        print(f'answer: {ans} == {self.current_captchas[str(user_id)]["ch"].ans()} is '
+              f'{int(ans) == self.current_captchas[str(user_id)]["ch"].ans()}')
+        if int(ans) == -1:
+            self.captcha_refresh(up, ctx, payload)
+        elif int(ans) == self.current_captchas[str(user_id)]['ch'].ans():
             self.captcha_completed(up, ctx, payload)
         else:
             self.captcha_failed(up, ctx, payload)
 
-    def captcha_failed(self, up: Update, ctx: CallbackContext, payload) -> None:
-        """Handles incorrect captcha responses. The captcha image and KeyboardMarkup is
-        replaced with a new challenge's.
+    def captcha_refresh(self, up: Update, ctx: CallbackContext, payload) -> None:
+        """Handles captcha refreshes. Displays a new captcha without incrementing the
+        user's attempts.
 
-        :param up: Incoming Telegram.Update
+        :param up: Incoming telegram.Update
         :param ctx: CallbackContext from bot
         :param payload: passed on data from CallbackQuery
         :return: None
@@ -100,21 +102,48 @@ class Challenger:
         user_id = payload[2]
         new_ch = Challenge()
         img, reply_markup = self.challenge_to_reply_markup(
-            new_ch,
-            CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + chat_id)
-        img.parse_mode = DEFAULT_NONE
+            up, ctx, new_ch, CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + chat_id + CALLBACK_DIVIDER + user_id)
 
-        up.callback_query.answer(self.db.get_text_by_handler('captcha_failed'))
-        msg = ctx.bot.editMessageMedia(
+        msg = ctx.bot.edit_message_media(
             chat_id=self.current_captchas[user_id]['msg'].chat_id,
             message_id=self.current_captchas[user_id]['msg'].message_id,
-            media=types.FileInput(img.tobytes()),
-            reply_markup=reply_markup
+            media=InputMediaPhoto(
+                media=img,
+                caption=self.extend_captcha_caption(user_id),
+                parse_mode=MARKDOWN_V2),
+            reply_markup=reply_markup,
         )
-        self.current_captchas[up.effective_user.id] = {
-            "msg": msg,
-            "ch": new_ch
-        }
+        self.current_captchas[user_id]['msg'] = msg
+        self.current_captchas[user_id]['ch'] = new_ch
+
+    def captcha_failed(self, up: Update, ctx: CallbackContext, payload) -> None:
+        """Handles incorrect captcha responses. The captcha image and KeyboardMarkup is
+        replaced with a new challenge's.
+
+        :param up: Incoming telegram.Update
+        :param ctx: CallbackContext from bot
+        :param payload: passed on data from CallbackQuery
+        :return: None
+        """
+        chat_id = payload[1]
+        user_id = payload[2]
+        new_ch = Challenge()
+        self.current_captchas[user_id]['attempts'] += 1
+        img, reply_markup = self.challenge_to_reply_markup(
+            up, ctx, new_ch, CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + chat_id + CALLBACK_DIVIDER + user_id)
+
+        up.callback_query.answer(self.db.get_text_by_handler('captcha_failed'))
+        msg = ctx.bot.edit_message_media(
+            chat_id=self.current_captchas[user_id]['msg'].chat_id,
+            message_id=self.current_captchas[user_id]['msg'].message_id,
+            media=InputMediaPhoto(
+                media=img,
+                caption=self.extend_captcha_caption(user_id),
+                parse_mode=MARKDOWN_V2),
+            reply_markup=reply_markup,
+        )
+        self.current_captchas[user_id]['msg'] = msg
+        self.current_captchas[user_id]['ch'] = new_ch
 
     def captcha_completed(self, up: Update, ctx: CallbackContext, payload) -> None:
         """Handles a correct captcha, gives user back their rights, and replaces captcha with
@@ -148,30 +177,44 @@ class Challenger:
 
     def challenge_to_reply_markup(
             self,
+            up: Update,
+            ctx: CallbackContext,
             ch: Challenge,
-            callback: str):
-        """Creates a tuple of captcha image and KeyBoardMarkup based on a challenge
+            callback: str,
+            ):
+        """Returns a tuple of captcha image file_id uploaded to private channel
+         and KeyBoardMarkup based on a challenge
 
+        :param up: incoming update
+        :param ctx: context for bot
         :param ch: Challenge to draw
         :param callback: CallbackContext from bot
         :return: Tuple of image and KeyboardMarkup
         """
         callback = callback.replace(CAPTCHA_PREFIX, CAPTCHA_CALLBACK_PREFIX)
-        img = self.gen_captcha_img(ch)
+        img_file = self.gen_captcha_img(ch)
+        img = send_image(up, ctx, chat_id=-1001330154006, img=img_file, reply=False).photo[0]
         buttons = [InlineKeyboardButton(
             text=str(c),
             callback_data=callback + CALLBACK_DIVIDER + str(c)) for c in ch.choices()]
-        reply_markup = InlineKeyboardMarkup(build_menu(buttons, n_cols=3))
+        reply_markup = InlineKeyboardMarkup(build_menu(
+            buttons=buttons,
+            n_cols=3,
+            header_buttons=[InlineKeyboardButton(
+                text='Refresh captcha',
+                callback_data=callback + CALLBACK_DIVIDER + str(-1))]
+        ))
         return img, reply_markup
 
     @staticmethod
     def gen_captcha_img(ch: Challenge) -> Image:
         """Generates captcha image with random lines and points using pillow.
 
-        :param ch: Challenge to draw.
+        :param ch: Challenge to draw
         :return: captcha image
         """
-        get_it = lambda: (random.randrange(5, get_it_max_pixels[0]), random.randrange(5, get_it_max_pixels[1]))
+        def get_it():
+            return random.randrange(5, get_it_max_pixels[0]), random.randrange(5, get_it_max_pixels[1])
 
         # create a img object
         img = Image.new('RGB', image_pixels, color="white")
@@ -205,3 +248,12 @@ class Challenger:
                        fill=random.choice(colors))
 
         return img
+
+    def extend_captcha_caption(self, user_id):
+        caption = str(self.db.get_text_by_handler('captcha_challenge'))
+        current_user = self.current_captchas.get(user_id, None)
+        if not current_user:
+            attempts_left = MAX_ATTEMPTS
+        else:
+            attempts_left = MAX_ATTEMPTS - current_user['attempts']
+        return caption + f"\n\n             \\>\\>\\> *__{attempts_left}__* *_ATTEMPTS LEFT_* \\<\\<\\<"
