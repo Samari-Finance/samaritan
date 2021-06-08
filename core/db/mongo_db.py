@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+from telegram.utils.helpers import DEFAULT_NONE
 
 from core.default_commands import commands
 
@@ -47,7 +48,12 @@ class MongoConn:
                                                  'text': value.get('text', ),
                                                  'type': value.get('type', 'command'),
                                                  'aliases': value.get('aliases', [key]),
-                                                 'delay': value.get('delay')
+                                                 'delay': value.get('delay'),
+                                                 'regex': value.get('regex'),
+                                                 'parse_mode': value.get('parse_mode'),
+                                                 'disable_web_page_preview': value.get('disable_web_page_preview', False),
+                                                 'reply': value.get('reply', True),
+                                                 'disable_notification': value.get('disable_notification', False),
                                              }}, upsert=True)
 
     def get_text_by_handler(self, key: str):

@@ -5,7 +5,6 @@
 """
 
 import logging
-import re
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -13,7 +12,7 @@ from telegram import (
     Update,
     ChatPermissions,
     InlineKeyboardButton,
-    InlineKeyboardMarkup, Message
+    InlineKeyboardMarkup,
 )
 from telegram.ext import (
     Updater,
@@ -30,17 +29,18 @@ from telegram.utils.helpers import (
 from core import (
     DEFAULT_DELAY,
     MARKDOWN_V2,
-    MEMBER_PERMISSIONS, LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR
+    LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR
 )
 from core.captcha.challenger import Challenger
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
-from core.utils import (
+from core.utils.test import dump_obj
+from core.utils.utils import (
     read_api,
     build_menu,
     send_message,
     regex_req,
-    send_image, gen_captcha_request_deeplink
+    gen_captcha_request_deeplink, gen_filter
 )
 
 
@@ -59,18 +59,24 @@ class Samaritan:
 
     def gen_handler_attr(self):
         for key in self.db.default_handlers.find():
+            if key.get('regex'):
+                _handle = self.gen_handler(key, 'regex')
+                setattr(self, self.get_handler_name(key, 'regex'), _handle)
             _handle = self.gen_handler(key)
-            setattr(self, f"_handler_{key['_id']}", _handle)
+            setattr(self, self.get_handler_name(key), _handle)
 
-    def gen_handler(self, handler_attr: dict):
+    def gen_handler(self, handler_attr: dict, handler_type=None):
+        handler_type = handler_type if handler_type else handler_attr['type']
+        print(handler_type)
 
         def handler(update, context):
-            if 'command' == handler_attr['type']:
+            if 'command' == handler_type:
                 return self.gen_command_handler(update, context, handler_attr)
-            elif 'timed' == handler_attr['type']:
+            elif 'timed' == handler_type:
                 return self.gen_timed_handler(update, context, handler_attr)
-            elif 'regex' == handler_attr['type']:
+            elif 'regex' == handler_type:
                 return self.gen_regex_handler(update, context, handler_attr)
+
         return handler
 
     def gen_command_handler(self, update, context, attributes: dict):
@@ -99,53 +105,26 @@ class Samaritan:
 
     def gen_regex_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
         if regex_req(up.message):
-            return getattr(self, f"_handler_{attributes['_id']}")
+            getattr(self, self.get_handler_name(attributes, 'command'))
 
-    def set_dp_handlers(self, dp):
+    def add_dp_handlers(self, dp):
         self.gen_handler_attr()
-        resolvers = {
-            'command': CommandHandler,
-            'timed': CommandHandler,
-            'regex': MessageHandler,
-        }
         for key in self.db.default_handlers.find():
-            if key['type'] == 'util' or key['type'] == 'captcha':
+            handler_type = key['type']
+            if handler_type == 'util' or handler_type == 'captcha':
                 continue
-            handler_type = resolvers[key['type']]
-            dp.add_handler(handler_type(key['aliases'], getattr(self, f"_handler_{key['_id']}")))
+            elif handler_type == 'command':
+                self.add_command_handler(dp, key)
+            if handler_type == 'regex':
+                self.add_regex_handler(dp, key)
 
-    def website_regex(self, update: Update, context):
-        if regex_req(update.message):
-            send_message(update, context, commands['website']['text'], parse_mode=MARKDOWN_V2)
+    def add_command_handler(self, dp, key):
+        dp.add_handler(CommandHandler(key['aliases'], getattr(self, self.get_handler_name(key))))
 
-    def chart_regex(self, update, context):
-        if regex_req(update.message):
-            send_message(update, context, commands['chart']['text'])
-
-    def version(self, up, ctx):
-        if regex_req(up.message):
-            send_message(up, ctx, 'V2')
-
-    def trade_regex(self, update: Update, context):
-        if regex_req(update.message):
-            getattr(self, f"_handler_trade")(update, context)
-
-    def contract(self, update, context):
-        send_message(update, context, commands['contract'], disable_web_page_preview=True)
-
-    def contract_regex(self, update: Update, context):
-        if regex_req(update.message):
-            self.contract(update, context)
-
-    def price(self, update, context):
-        send_message(update, context, commands['price'])
-
-    def lp_regex(self, update: Update, context):
-        if regex_req(update.message):
-            self.lp(update, context)
-
-    def lp(self, update, context):
-        send_message(update, context, commands['lp'], disable_web_page_preview=True, parse_mode=MARKDOWN_V2)
+    def add_regex_handler(self, dp, key, aliases=None):
+        aliases = aliases if aliases else key['aliases']
+        print(aliases)
+        dp.add_handler(MessageHandler(gen_filter(aliases), getattr(self, self.get_handler_name(key))))
 
     @staticmethod
     def _prettify_reference(update: Update, prev_msg):
@@ -258,41 +237,17 @@ class Samaritan:
                                       self.challenger.captcha_deeplink,
                                       Filters.regex(r'captcha_([a-zA-Z0-9]*)'),
                                       pass_args=True))
-        self.set_dp_handlers(dp)
+        self.add_dp_handlers(dp)
+        dump_obj(self)
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
-        dp.add_handler(MessageHandler(
-            Filters.regex(re.compile(r'v2\??')) |
-            Filters.regex(re.compile(r'v1\??')),
-            self.version))
-        dp.add_handler(MessageHandler(
-            Filters.regex(re.compile(r'lp locked\??', re.IGNORECASE)) |
-            Filters.regex(re.compile(r'liquidity locked\??', re.IGNORECASE)) |
-            Filters.regex(re.compile(r'locked\??', re.IGNORECASE)) |
-            Filters.regex(re.compile(r'lp\??', re.IGNORECASE)),
-            self.lp_regex))
-        dp.add_handler(MessageHandler(
-            Filters.regex(re.compile(r'contract\??', re.IGNORECASE)) |
-            Filters.regex(re.compile(r'sc\??', re.IGNORECASE)),
-            self.contract_regex))
-        dp.add_handler(MessageHandler(
-            Filters.regex(re.compile(r'website\??', re.IGNORECASE)),
-            self.website_regex))
-        dp.add_handler(MessageHandler(
-            Filters.regex(re.compile(r'pancakeswap\??', re.IGNORECASE)) |
-            Filters.regex(re.compile(r'pcs\??', re.IGNORECASE)),
-            self.trade_regex))
-        dp.add_handler(MessageHandler(
-            Filters.regex(re.compile(r'chart\??', re.IGNORECASE)),
-            self.chart_regex
-        ))
 
     def _wrap_method(self, method):  # Wrapper called in case of a method
         @wraps(method)
-        def inner(self_inner, *args, **kwargs):  # `self` is the *inner* class' `self` here
+        def inner(self_inner, *args, **kwargs):
             user_id = args[0].effective_user.id  # args[0]: update
             if user_id not in self.db.get_admins:
                 print(f'Unauthorized access denied on {method.__name__}'
@@ -306,6 +261,12 @@ class Samaritan:
     def captcha_text(up: Update, ctx: CallbackContext):
         return f"Welcome {up.effective_user.name}, to Samari Finance ❤️\n" \
                f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
+
+    @staticmethod
+    def get_handler_name(attributes: dict, handler_type=None):
+        handler_type = handler_type if handler_type else attributes['type']
+        name = f"_handler_{attributes['_id']}_{handler_type}"
+        return name
 
 
 def setup_log(log_level):
