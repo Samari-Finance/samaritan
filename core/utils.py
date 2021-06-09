@@ -143,7 +143,7 @@ def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext, msg_id):
     deeplink = f'https://t.me/{ctx.bot.username}?start=' \
                f'{CAPTCHA_PREFIX + CALLBACK_DIVIDER}' \
                f'{str(up.effective_chat.id) + CALLBACK_DIVIDER}' \
-               f'{str(up.chat_member.new_chat_member.user.id)}' \
+               f'{str(up.chat_member.new_chat_member.user.id) + CALLBACK_DIVIDER}' \
                f'{str(msg_id)}'
     print(f'deeplink: {deeplink}')
     return deeplink
