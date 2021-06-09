@@ -7,6 +7,7 @@
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
+from typing import Callable
 
 from telegram import (
     Update,
@@ -65,9 +66,8 @@ class Samaritan:
             _handle = self.gen_handler(key)
             setattr(self, self.get_handler_name(key), _handle)
 
-    def gen_handler(self, handler_attr: dict, handler_type=None):
+    def gen_handler(self, handler_attr: dict, handler_type=None) -> Callable:
         handler_type = handler_type if handler_type else handler_attr['type']
-        print(handler_type)
 
         def handler(update, context):
             if 'command' == handler_type:
@@ -105,7 +105,7 @@ class Samaritan:
 
     def gen_regex_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
         if regex_req(up.message):
-            getattr(self, self.get_handler_name(attributes, 'command'))
+            getattr(self, self.get_handler_name(attributes, 'command'))(up, ctx)
 
     def add_dp_handlers(self, dp):
         self.gen_handler_attr()
@@ -113,9 +113,11 @@ class Samaritan:
             handler_type = key['type']
             if handler_type == 'util' or handler_type == 'captcha':
                 continue
-            elif handler_type == 'command':
+            elif handler_type == 'command' or handler_type == 'timed':
                 self.add_command_handler(dp, key)
-            if handler_type == 'regex':
+                if key.get('regex'):
+                    self.add_regex_handler(dp, key, key['regex'])
+            elif handler_type == 'regex':
                 self.add_regex_handler(dp, key)
 
     def add_command_handler(self, dp, key):
@@ -123,12 +125,7 @@ class Samaritan:
 
     def add_regex_handler(self, dp, key, aliases=None):
         aliases = aliases if aliases else key['aliases']
-        print(aliases)
-        dp.add_handler(MessageHandler(gen_filter(aliases), getattr(self, self.get_handler_name(key))))
-
-    @staticmethod
-    def _prettify_reference(update: Update, prev_msg):
-        return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
+        dp.add_handler(MessageHandler(gen_filter(aliases), getattr(self, self.get_handler_name(key, 'regex'))))
 
     def contest(self, update: Update, context: CallbackContext):
         user = update.effective_user
@@ -237,13 +234,24 @@ class Samaritan:
                                       self.challenger.captcha_deeplink,
                                       Filters.regex(r'captcha_([a-zA-Z0-9]*)'),
                                       pass_args=True))
-        self.add_dp_handlers(dp)
-        dump_obj(self)
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
+        self.add_dp_handlers(dp)
+        dump_obj(self)
+
+    @staticmethod
+    def captcha_text(up: Update, ctx: CallbackContext):
+        return f"Welcome {up.effective_user.name}, to Samari Finance ❤️\n" \
+               f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
+
+    @staticmethod
+    def get_handler_name(attributes: dict, handler_type=None):
+        handler_type = handler_type if handler_type else attributes['type']
+        name = f"_handler_{attributes['_id']}_{handler_type}"
+        return name
 
     def _wrap_method(self, method):  # Wrapper called in case of a method
         @wraps(method)
@@ -258,15 +266,8 @@ class Samaritan:
         return inner
 
     @staticmethod
-    def captcha_text(up: Update, ctx: CallbackContext):
-        return f"Welcome {up.effective_user.name}, to Samari Finance ❤️\n" \
-               f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
-
-    @staticmethod
-    def get_handler_name(attributes: dict, handler_type=None):
-        handler_type = handler_type if handler_type else attributes['type']
-        name = f"_handler_{attributes['_id']}_{handler_type}"
-        return name
+    def _prettify_reference(update: Update, prev_msg):
+        return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
 
 
 def setup_log(log_level):
