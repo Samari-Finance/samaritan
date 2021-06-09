@@ -43,6 +43,8 @@ from core.utils import (
     gen_captcha_request_deeplink
 )
 
+log = logging.getLogger('telegram.bot')
+
 
 class Samaritan:
 
@@ -241,7 +243,8 @@ class Samaritan:
         return just_joined, just_left
 
     def request_captcha(self, up: Update, ctx: CallbackContext):
-        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋")]
+        url = gen_captcha_request_deeplink(up, ctx, -1)
+        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
         msg = send_message(
             text=self.captcha_text(up, ctx),
@@ -253,6 +256,7 @@ class Samaritan:
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
         ctx.bot.edit_message_reply_markup(
             chat_id=up.effective_chat.id,
+            message_id=msg.message_id,
             reply_markup=reply_markup
         )
 
