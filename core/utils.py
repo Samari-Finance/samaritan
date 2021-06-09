@@ -112,10 +112,10 @@ def read_api(api_key_file):
 
 
 def build_menu(
-    buttons: List[InlineKeyboardButton],
-    n_cols: int,
-    header_buttons: Union[InlineKeyboardButton, List[InlineKeyboardButton]] = None,
-    footer_buttons: Union[InlineKeyboardButton, List[InlineKeyboardButton]] = None
+        buttons: List[InlineKeyboardButton],
+        n_cols: int,
+        header_buttons: Union[InlineKeyboardButton, List[InlineKeyboardButton]] = None,
+        footer_buttons: Union[InlineKeyboardButton, List[InlineKeyboardButton]] = None
 ) -> List[List[InlineKeyboardButton]]:
     """Easy button menu builder.
 
@@ -133,16 +133,18 @@ def build_menu(
     return menu
 
 
-def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
+def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext, msg_id):
     """Generates a new captcha request deeplink based on incoming Update and bot.CallbackContext
     :param up: Incoming telegram.Update
     :param ctx: CallbackContext for bot
+    :param msg_id: Message id of the request captcha message
     :return: Deeplink to private chat with bot for captcha request
     """
     deeplink = f'https://t.me/{ctx.bot.username}?start=' \
-               f'{CAPTCHA_PREFIX+CALLBACK_DIVIDER}' \
-               f'{str(up.effective_chat.id)+CALLBACK_DIVIDER}' \
-               f'{str(up.chat_member.new_chat_member.user.id)}'
+               f'{CAPTCHA_PREFIX + CALLBACK_DIVIDER}' \
+               f'{str(up.effective_chat.id) + CALLBACK_DIVIDER}' \
+               f'{str(up.chat_member.new_chat_member.user.id)}' \
+               f'{str(msg_id)}'
     print(f'deeplink: {deeplink}')
     return deeplink
 
@@ -165,4 +167,3 @@ def pp_json(msg):
     """
     json_str = json.loads(msg)
     print(json.dumps(json_str, indent=3))
-

@@ -13,7 +13,7 @@ from telegram import (
     Update,
     ChatPermissions,
     InlineKeyboardButton,
-    InlineKeyboardMarkup, Message
+    InlineKeyboardMarkup,
 )
 from telegram.ext import (
     Updater,
@@ -30,7 +30,7 @@ from telegram.utils.helpers import (
 from core import (
     DEFAULT_DELAY,
     MARKDOWN_V2,
-    MEMBER_PERMISSIONS, LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR
+    LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR
 )
 from core.captcha.challenger import Challenger
 from core.default_commands import commands
@@ -40,7 +40,7 @@ from core.utils import (
     build_menu,
     send_message,
     regex_req,
-    send_image, gen_captcha_request_deeplink
+    gen_captcha_request_deeplink
 )
 
 
@@ -241,14 +241,20 @@ class Samaritan:
         return just_joined, just_left
 
     def request_captcha(self, up: Update, ctx: CallbackContext):
-        url = gen_captcha_request_deeplink(up, ctx)
-        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
+        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋")]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
-        send_message(
+        msg = send_message(
             text=self.captcha_text(up, ctx),
             reply_markup=reply_markup,
             update=up,
             context=ctx)
+        url = gen_captcha_request_deeplink(up, ctx, msg.message_id)
+        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
+        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
+        ctx.bot.edit_message_reply_markup(
+            chat_id=up.effective_chat.id,
+            reply_markup=reply_markup
+        )
 
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
