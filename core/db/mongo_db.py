@@ -1,5 +1,4 @@
 from pymongo import MongoClient
-from telegram.utils.helpers import DEFAULT_NONE
 
 from core.default_commands import commands
 
@@ -43,23 +42,16 @@ class MongoConn:
 
     def set_default_handlers(self):
         for key, value in commands.items():
-            self.default_handlers.update_one({'_id': key},
-                                             {'$set': {
-                                                 'text': value.get('text', ),
-                                                 'type': value.get('type', 'command'),
-                                                 'aliases': value.get('aliases', [key]),
-                                                 'delay': value.get('delay'),
-                                                 'regex': value.get('regex'),
-                                                 'parse_mode': value.get('parse_mode'),
-                                                 'disable_web_page_preview': value.get('disable_web_page_preview', False),
-                                                 'reply': value.get('reply', True),
-                                                 'disable_notification': value.get('disable_notification', False),
-                                             }}, upsert=True)
+            for inner_key, inner_val in value.items():
+                self.default_handlers.update_one({'_id': key},
+                                                 {'$set': {
+                                                     inner_key: inner_val
+                                                 }}, upsert=True)
 
     def get_text_by_handler(self, key: str):
         try:
             text = self.handlers.find_one({'_id': key})['text']
-        except TypeError as e:
+        except TypeError:
             try:
                 text = self.default_handlers.find_one({'_id': key})['text']
             except TypeError:
