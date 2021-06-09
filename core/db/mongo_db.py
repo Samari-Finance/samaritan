@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 
+from core import MEMBER_PERMISSIONS
 from core.default_commands import commands
 
 
@@ -93,3 +94,17 @@ class MongoConn:
         self.client = MongoClient(path)
         self.db = self.client['main']
         self._init_cols()
+
+    def set_captcha_status(self, user_id, status: bool):
+        self.members.update_one({'_id': user_id},
+                                {'$set': {
+                                    'captcha_completed': status
+                                }}, upsert=True)
+
+    def get_captcha_status(self, user_id) -> bool:
+        try:
+            return self.members.find_one({'_id': user_id}).get('captcha_completed', False)
+
+        except (KeyError, AttributeError, TypeError):
+            self.set_captcha_status(user_id=user_id, status=False)
+            return False
