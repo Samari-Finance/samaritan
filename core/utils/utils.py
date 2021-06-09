@@ -1,4 +1,3 @@
-import json
 import os
 import re
 from io import BytesIO
@@ -10,7 +9,6 @@ from telegram.ext import CallbackContext, Filters
 from telegram.utils.helpers import DEFAULT_NONE
 
 from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER
-from core.captcha.challenge import Challenge
 
 
 def send_message(update: Update, context: CallbackContext,
@@ -164,10 +162,8 @@ def gen_filter(aliases: list):
     :param aliases: List of aliases to
     :return: regex expression which has
     """
-    expr = Filters.regex(re.compile(aliases[0]+r'?\?', re.IGNORECASE))
+    expr = Filters.regex(re.compile(aliases[0]+r'\??', re.IGNORECASE))
     for alias in aliases[1:]:
-        expr = expr | Filters.regex(re.compile(alias+r'?\?', re.IGNORECASE))
+        expr = expr | Filters.regex(re.compile(alias+r'\??', re.IGNORECASE))
     print(expr)
     return expr
-
-
