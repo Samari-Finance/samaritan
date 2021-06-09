@@ -1,4 +1,6 @@
+import logging
 import random
+from datetime import timedelta, datetime
 
 from PIL import Image, ImageFont
 from PIL import ImageDraw
@@ -26,11 +28,15 @@ points_max = int(50 * multiplier)
 
 MAX_ATTEMPTS = 4
 
+log = logging.getLogger('telegram.bot')
+
 
 class Challenger:
 
     def __init__(self,
-                 db: MongoConn):
+                 db: MongoConn,
+                 log_name='samaritan'):
+        self.log = logging.getLogger(log_name)
         self.db = db
         self.current_captchas = {}
 
@@ -44,23 +50,33 @@ class Challenger:
         :return: None
         """
         payload = ctx.args[0].split(CALLBACK_DIVIDER)
+        chat_id = payload[1]
         user_id = payload[2]
-        ch = Challenge()
-        img, reply_markup = self.challenge_to_reply_markup(up, ctx, ch, ctx.args[0])
+        msg_id = payload[3]
 
-        msg = send_image(
-            up,
-            ctx,
-            img=img,
-            caption=self.extend_captcha_caption(user_id),
-            parse_mode=MARKDOWN_V2,
-            reply_markup=reply_markup,
-            reply=False)
-        self.current_captchas[user_id] = {
-            "msg": msg,
-            "ch": ch,
-            "attempts": 0,
-        }
+        if not self.current_captchas.get(user_id):
+            ch = Challenge()
+            img, reply_markup = self.challenge_to_reply_markup(up, ctx, ch, ctx.args[0])
+            msg = send_image(
+                up,
+                ctx,
+                img=img,
+                caption=self.extend_captcha_caption(user_id),
+                parse_mode=MARKDOWN_V2,
+                reply_markup=reply_markup,
+                reply=False)
+            self.current_captchas[user_id] = {
+                "msg": msg,
+                "ch": ch,
+                "attempts": 0,
+            }
+            self.db.set_captcha_status(user_id, False)
+            self.kick_if_incomplete(up, ctx,
+                                    chat_id=chat_id,
+                                    private_chat_id=msg.chat_id,
+                                    user_id=user_id,
+                                    msg_id=msg_id,
+                                    private_msg_id=msg.message_id)
 
     def captcha_callback(self, up: Update, ctx: CallbackContext) -> None:
         """Determines if answer to captcha is correct or not,
@@ -73,7 +89,7 @@ class Challenger:
         payload = up.callback_query.data.split(CALLBACK_DIVIDER)
         user_id = payload[2]
         ans = payload[-1]
-        print(f'payload_callback: {payload}')
+        print(str(payload))
 
         for element in self.current_captchas.items():
             print(str(element))
@@ -97,9 +113,10 @@ class Challenger:
         """
         chat_id = payload[1]
         user_id = payload[2]
+        msg_id = payload[3]
         new_ch = Challenge()
         img, reply_markup = self.challenge_to_reply_markup(
-            up, ctx, new_ch, CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + chat_id + CALLBACK_DIVIDER + user_id)
+            up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id, msg_id))
 
         msg = ctx.bot.edit_message_media(
             chat_id=self.current_captchas[user_id]['msg'].chat_id,
@@ -124,10 +141,11 @@ class Challenger:
         """
         chat_id = payload[1]
         user_id = payload[2]
+        msg_id = payload[3]
         new_ch = Challenge()
         self.current_captchas[user_id]['attempts'] += 1
         img, reply_markup = self.challenge_to_reply_markup(
-            up, ctx, new_ch, CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + chat_id + CALLBACK_DIVIDER + user_id)
+            up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id, msg_id))
 
         up.callback_query.answer(self.db.get_text_by_handler('captcha_failed'))
         msg = ctx.bot.edit_message_media(
@@ -175,6 +193,7 @@ class Challenger:
             chat_id=chat_id,
             message_id=msg_id
         )
+        self.db.set_captcha_status(user_id, True)
         self.current_captchas.pop(str(user_id))
 
     def challenge_to_reply_markup(
@@ -251,6 +270,12 @@ class Challenger:
 
         return img
 
+    @staticmethod
+    def gen_captcha_callback(chat_id, user_id, msg_id):
+        return CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER +\
+               chat_id + CALLBACK_DIVIDER + \
+               user_id + CALLBACK_DIVIDER + msg_id
+
     def extend_captcha_caption(self, user_id):
         caption = str(self.db.get_text_by_handler('captcha_challenge'))
         current_user = self.current_captchas.get(user_id, None)
@@ -259,3 +284,25 @@ class Challenger:
         else:
             attempts_left = MAX_ATTEMPTS - current_user['attempts']
         return caption + f"\n\n             \\>\\>\\> *__{attempts_left}__* *_ATTEMPTS LEFT_* \\<\\<\\<"
+
+    def kick_if_incomplete(self,
+                           up: Update,
+                           ctx: CallbackContext,
+                           chat_id,
+                           private_chat_id,
+                           user_id,
+                           private_msg_id,
+                           msg_id) -> None:
+        def once(ctx: CallbackContext):
+            if not self.db.get_captcha_status(user_id):
+                ctx.bot.kick_chat_member(chat_id=chat_id, user_id=user_id)
+                ctx.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                ctx.bot.delete_message(chat_id=private_chat_id, message_id=private_msg_id)
+                self.db.remove_ref(user_id)
+                ctx.job_queue.run_once(callback=unban, when=timedelta(seconds=10))
+                self.current_captchas.pop(user_id)
+
+        def unban(ctx: CallbackContext):
+            ctx.bot.unban_chat_member(chat_id=chat_id, user_id=user_id, only_if_banned=True)
+
+        ctx.job_queue.run_once(callback=once, when=timedelta(seconds=10))
