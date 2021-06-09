@@ -36,7 +36,7 @@ class Challenger:
 
     def captcha_deeplink(self, up: Update, ctx: CallbackContext) -> None:
         """Entrance handle callback for captcha deeplinks. Generates new challenge,
-        presents it to the user, and saves the sent msg in current_callbacks to retrieve the id
+        presents it to the user, and saves the sent msg in current_captchas to retrieve the id
         later when checking for answer.
 
         :param up: Incoming telegram.Update
@@ -56,14 +56,11 @@ class Challenger:
             parse_mode=MARKDOWN_V2,
             reply_markup=reply_markup,
             reply=False)
-        print(f'user_id: {user_id}')
         self.current_captchas[user_id] = {
             "msg": msg,
             "ch": ch,
             "attempts": 0,
         }
-        for element in self.current_captchas.items():
-            str(element)
 
     def captcha_callback(self, up: Update, ctx: CallbackContext) -> None:
         """Determines if answer to captcha is correct or not,
@@ -156,6 +153,7 @@ class Challenger:
         """
         chat_id = payload[1]
         user_id = payload[2]
+        msg_id = payload[3]
         ctx.bot.restrict_chat_member(
             chat_id=chat_id,
             user_id=user_id,
@@ -172,6 +170,10 @@ class Challenger:
             self.db.get_text_by_handler('captcha_complete'),
             reply_markup=kb_markup,
             disable_web_page_preview=True,
+        )
+        ctx.bot.delete_message(
+            chat_id=chat_id,
+            message_id=msg_id
         )
         self.current_captchas.pop(str(user_id))
 
