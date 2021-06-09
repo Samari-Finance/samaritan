@@ -15,6 +15,13 @@ ADMIN = ChatMember.ADMINISTRATOR
 RESTRICTED = ChatMember.RESTRICTED
 CREATOR = ChatMember.CREATOR
 
+"""Handler type names
+"""
+REGEX = 'regex'
+COMMAND = 'command'
+TIMED = 'timed'
+UTIL = 'util'
+CAPTCHA = 'captcha'
 
 """Default delay for timed attributes
 """

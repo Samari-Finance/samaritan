@@ -30,7 +30,7 @@ from telegram.utils.helpers import (
 from core import (
     DEFAULT_DELAY,
     MARKDOWN_V2,
-    LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR
+    LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR, REGEX, COMMAND, TIMED, CAPTCHA, UTIL
 )
 from core.captcha.challenger import Challenger
 from core.default_commands import commands
@@ -61,8 +61,8 @@ class Samaritan:
     def gen_handler_attr(self):
         for key in self.db.default_handlers.find():
             if key.get('regex'):
-                _handle = self.gen_handler(key, 'regex')
-                setattr(self, self.get_handler_name(key, 'regex'), _handle)
+                _handle = self.gen_handler(key, REGEX)
+                setattr(self, self.get_handler_name(key, REGEX), _handle)
             _handle = self.gen_handler(key)
             setattr(self, self.get_handler_name(key), _handle)
 
@@ -70,11 +70,11 @@ class Samaritan:
         handler_type = handler_type if handler_type else handler_attr['type']
 
         def handler(update, context):
-            if 'command' == handler_type:
+            if COMMAND == handler_type:
                 return self.gen_command_handler(update, context, handler_attr)
-            elif 'timed' == handler_type:
+            elif TIMED == handler_type:
                 return self.gen_timed_handler(update, context, handler_attr)
-            elif 'regex' == handler_type:
+            elif REGEX == handler_type:
                 return self.gen_regex_handler(update, context, handler_attr)
 
         return handler
@@ -105,19 +105,22 @@ class Samaritan:
 
     def gen_regex_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
         if regex_req(up.message):
-            getattr(self, self.get_handler_name(attributes, 'command'))(up, ctx)
+            if attributes['type'] == REGEX:
+                getattr(self, self.get_handler_name(attributes))(up, ctx)
+            else:
+                getattr(self, self.get_handler_name(attributes, COMMAND))(up, ctx)
 
     def add_dp_handlers(self, dp):
         self.gen_handler_attr()
         for key in self.db.default_handlers.find():
             handler_type = key['type']
-            if handler_type == 'util' or handler_type == 'captcha':
+            if handler_type == UTIL or handler_type == CAPTCHA:
                 continue
-            elif handler_type == 'command' or handler_type == 'timed':
+            elif handler_type == COMMAND or handler_type == TIMED:
                 self.add_command_handler(dp, key)
                 if key.get('regex'):
                     self.add_regex_handler(dp, key, key['regex'])
-            elif handler_type == 'regex':
+            elif handler_type == REGEX:
                 self.add_regex_handler(dp, key)
 
     def add_command_handler(self, dp, key):
@@ -125,7 +128,7 @@ class Samaritan:
 
     def add_regex_handler(self, dp, key, aliases=None):
         aliases = aliases if aliases else key['aliases']
-        dp.add_handler(MessageHandler(gen_filter(aliases), getattr(self, self.get_handler_name(key, 'regex'))))
+        dp.add_handler(MessageHandler(gen_filter(aliases), getattr(self, self.get_handler_name(key, REGEX))))
 
     def contest(self, update: Update, context: CallbackContext):
         user = update.effective_user
