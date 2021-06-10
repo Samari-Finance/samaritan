@@ -10,6 +10,7 @@ from telegram.ext import CallbackContext
 from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, CAPTCHA_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
+from core.samaritable import Samaritable
 from core.utils import build_menu, send_image, send_message
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
@@ -31,14 +32,16 @@ MAX_ATTEMPTS = 4
 log = logging.getLogger('telegram.bot')
 
 
-class Challenger:
+class Challenger(Samaritable):
 
     def __init__(self,
-                 db: MongoConn,
-                 log_name='samaritan'):
-        self.log = logging.getLogger(log_name)
+                 db: MongoConn):
         self.db = db
         self.current_captchas = {}
+        super().__init__()
+
+    def __set_name__(self, owner, name):
+        self.name = name
 
     def captcha_deeplink(self, up: Update, ctx: CallbackContext) -> None:
         """Entrance handle callback for captcha deeplinks. Generates new challenge,
@@ -77,6 +80,9 @@ class Challenger:
                                     user_id=user_id,
                                     msg_id=msg_id,
                                     private_msg_id=msg.message_id)
+        else:
+            ch = self.current_captchas[user_id]['ch']
+
 
     def captcha_callback(self, up: Update, ctx: CallbackContext) -> None:
         """Determines if answer to captcha is correct or not,
@@ -172,6 +178,7 @@ class Challenger:
         chat_id = payload[1]
         user_id = payload[2]
         msg_id = payload[3]
+        print('completed payload:'+str(payload))
         ctx.bot.restrict_chat_member(
             chat_id=chat_id,
             user_id=user_id,
@@ -179,6 +186,10 @@ class Challenger:
         ctx.bot.delete_message(
             chat_id=up.effective_chat.id,
             message_id=self.current_captchas[str(user_id)]['msg'].message_id)
+        ctx.bot.delete_message(
+            chat_id=chat_id,
+            message_id=msg_id
+        )
         kb_markup = InlineKeyboardMarkup([[InlineKeyboardButton(
             text='Return to Samari.finance',
             url='https://t.me/samaritantestt')]])
@@ -188,10 +199,6 @@ class Challenger:
             self.db.get_text_by_handler('captcha_complete'),
             reply_markup=kb_markup,
             disable_web_page_preview=True,
-        )
-        ctx.bot.delete_message(
-            chat_id=chat_id,
-            message_id=msg_id
         )
         self.db.set_captcha_status(user_id, True)
         self.current_captchas.pop(str(user_id))
@@ -295,14 +302,21 @@ class Challenger:
                            msg_id) -> None:
         def once(ctx: CallbackContext):
             if not self.db.get_captcha_status(user_id):
+                print(f'Kicking {user_id} from {chat_id}, and deleting {msg_id} from {chat_id}'
+                      f' and {private_msg_id} from {private_chat_id}')
+                self.log.debug(
+                    f'Kicking {user_id} from {chat_id}, and deleting {msg_id} from {chat_id}'
+                    f' and {private_msg_id} from {private_chat_id}')
                 ctx.bot.kick_chat_member(chat_id=chat_id, user_id=user_id)
                 ctx.bot.delete_message(chat_id=chat_id, message_id=msg_id)
                 ctx.bot.delete_message(chat_id=private_chat_id, message_id=private_msg_id)
                 self.db.remove_ref(user_id)
+                self.db.set_captcha_status(user_id, False)
                 ctx.job_queue.run_once(callback=unban, when=timedelta(seconds=10))
                 self.current_captchas.pop(user_id)
 
         def unban(ctx: CallbackContext):
             ctx.bot.unban_chat_member(chat_id=chat_id, user_id=user_id, only_if_banned=True)
+            self.db.set_captcha_status(user_id, False)
 
         ctx.job_queue.run_once(callback=once, when=timedelta(seconds=10))
