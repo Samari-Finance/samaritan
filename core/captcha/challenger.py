@@ -1,4 +1,6 @@
+import logging
 import random
+from datetime import timedelta, datetime
 
 from PIL import Image, ImageFont
 from PIL import ImageDraw
@@ -9,6 +11,7 @@ from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, 
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
 from core.utils.utils import build_menu, send_image, send_message
+from core.samaritable import Samaritable
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
 fill_color = [(64, 107, 76), (0, 87, 128), (0, 3, 82), (191, 0, 255), (72, 189, 0), (189, 107, 0), (189, 41, 0)]
@@ -26,17 +29,20 @@ points_max = int(50 * multiplier)
 
 MAX_ATTEMPTS = 4
 
+log = logging.getLogger('telegram.bot')
 
-class Challenger:
+
+class Challenger(Samaritable):
 
     def __init__(self,
                  db: MongoConn):
         self.db = db
         self.current_captchas = {}
+        super().__init__()
 
     def captcha_deeplink(self, up: Update, ctx: CallbackContext) -> None:
         """Entrance handle callback for captcha deeplinks. Generates new challenge,
-        presents it to the user, and saves the sent msg in current_callbacks to retrieve the id
+        presents it to the user, and saves the sent msg in current_captchas to retrieve the id
         later when checking for answer.
 
         :param up: Incoming telegram.Update
@@ -44,26 +50,36 @@ class Challenger:
         :return: None
         """
         payload = ctx.args[0].split(CALLBACK_DIVIDER)
+        chat_id = payload[1]
         user_id = payload[2]
-        ch = Challenge()
-        img, reply_markup = self.challenge_to_reply_markup(up, ctx, ch, ctx.args[0])
+        msg_id = payload[3]
 
-        msg = send_image(
-            up,
-            ctx,
-            img=img,
-            caption=self.extend_captcha_caption(user_id),
-            parse_mode=MARKDOWN_V2,
-            reply_markup=reply_markup,
-            reply=False)
-        print(f'user_id: {user_id}')
-        self.current_captchas[user_id] = {
-            "msg": msg,
-            "ch": ch,
-            "attempts": 0,
-        }
-        for element in self.current_captchas.items():
-            str(element)
+        if not self.current_captchas.get(user_id):
+            ch = Challenge()
+            img, reply_markup = self.challenge_to_reply_markup(up, ctx, ch, ctx.args[0])
+            msg = send_image(
+                up,
+                ctx,
+                img=img,
+                caption=self.extend_captcha_caption(user_id),
+                parse_mode=MARKDOWN_V2,
+                reply_markup=reply_markup,
+                reply=False)
+            self.current_captchas[user_id] = {
+                "msg": msg,
+                "ch": ch,
+                "attempts": 0,
+            }
+            self.db.set_captcha_status(user_id, False)
+            self.kick_if_incomplete(up, ctx,
+                                    chat_id=chat_id,
+                                    private_chat_id=msg.chat_id,
+                                    user_id=user_id,
+                                    msg_id=msg_id,
+                                    private_msg_id=msg.message_id)
+        else:
+            ch = self.current_captchas[user_id]['ch']
+
 
     def captcha_callback(self, up: Update, ctx: CallbackContext) -> None:
         """Determines if answer to captcha is correct or not,
@@ -76,7 +92,7 @@ class Challenger:
         payload = up.callback_query.data.split(CALLBACK_DIVIDER)
         user_id = payload[2]
         ans = payload[-1]
-        print(f'payload_callback: {payload}')
+        print(f'payload_callback: {str(payload)}')
 
         for element in self.current_captchas.items():
             print(str(element))
@@ -100,9 +116,10 @@ class Challenger:
         """
         chat_id = payload[1]
         user_id = payload[2]
+        msg_id = payload[3]
         new_ch = Challenge()
         img, reply_markup = self.challenge_to_reply_markup(
-            up, ctx, new_ch, CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + chat_id + CALLBACK_DIVIDER + user_id)
+            up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id, msg_id))
 
         msg = ctx.bot.edit_message_media(
             chat_id=self.current_captchas[user_id]['msg'].chat_id,
@@ -127,10 +144,11 @@ class Challenger:
         """
         chat_id = payload[1]
         user_id = payload[2]
+        msg_id = payload[3]
         new_ch = Challenge()
         self.current_captchas[user_id]['attempts'] += 1
         img, reply_markup = self.challenge_to_reply_markup(
-            up, ctx, new_ch, CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + chat_id + CALLBACK_DIVIDER + user_id)
+            up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id, msg_id))
 
         up.callback_query.answer(self.db.get_text_by_handler('captcha_failed'))
         msg = ctx.bot.edit_message_media(
@@ -156,6 +174,8 @@ class Challenger:
         """
         chat_id = payload[1]
         user_id = payload[2]
+        msg_id = payload[3]
+        print('completed payload:'+str(payload))
         ctx.bot.restrict_chat_member(
             chat_id=chat_id,
             user_id=user_id,
@@ -163,6 +183,10 @@ class Challenger:
         ctx.bot.delete_message(
             chat_id=up.effective_chat.id,
             message_id=self.current_captchas[str(user_id)]['msg'].message_id)
+        ctx.bot.delete_message(
+            chat_id=chat_id,
+            message_id=msg_id
+        )
         kb_markup = InlineKeyboardMarkup([[InlineKeyboardButton(
             text='Return to Samari.finance',
             url='https://t.me/samaritantestt')]])
@@ -173,6 +197,7 @@ class Challenger:
             reply_markup=kb_markup,
             disable_web_page_preview=True,
         )
+        self.db.set_captcha_status(user_id, True)
         self.current_captchas.pop(str(user_id))
 
     def challenge_to_reply_markup(
@@ -249,6 +274,12 @@ class Challenger:
 
         return img
 
+    @staticmethod
+    def gen_captcha_callback(chat_id, user_id, msg_id):
+        return CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER +\
+               chat_id + CALLBACK_DIVIDER + \
+               user_id + CALLBACK_DIVIDER + msg_id
+
     def extend_captcha_caption(self, user_id):
         caption = str(self.db.get_text_by_handler('captcha_challenge'))
         current_user = self.current_captchas.get(user_id, None)
@@ -257,3 +288,32 @@ class Challenger:
         else:
             attempts_left = MAX_ATTEMPTS - current_user['attempts']
         return caption + f"\n\n             \\>\\>\\> *__{attempts_left}__* *_ATTEMPTS LEFT_* \\<\\<\\<"
+
+    def kick_if_incomplete(self,
+                           up: Update,
+                           ctx: CallbackContext,
+                           chat_id,
+                           private_chat_id,
+                           user_id,
+                           private_msg_id,
+                           msg_id) -> None:
+        def once(ctx: CallbackContext):
+            if not self.db.get_captcha_status(user_id):
+                print(f'Kicking {user_id} from {chat_id}, and deleting {msg_id} from {chat_id}'
+                      f' and {private_msg_id} from {private_chat_id}')
+                self.log.debug(
+                    f'Kicking {user_id} from {chat_id}, and deleting {msg_id} from {chat_id}'
+                    f' and {private_msg_id} from {private_chat_id}')
+                ctx.bot.kick_chat_member(chat_id=chat_id, user_id=user_id)
+                ctx.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                ctx.bot.delete_message(chat_id=private_chat_id, message_id=private_msg_id)
+                self.db.remove_ref(user_id)
+                self.db.set_captcha_status(user_id, False)
+                ctx.job_queue.run_once(callback=unban, when=timedelta(seconds=10))
+                self.current_captchas.pop(user_id)
+
+        def unban(ctx: CallbackContext):
+            ctx.bot.unban_chat_member(chat_id=chat_id, user_id=user_id, only_if_banned=True)
+            self.db.set_captcha_status(user_id, False)
+
+        ctx.job_queue.run_once(callback=once, when=timedelta(seconds=10))

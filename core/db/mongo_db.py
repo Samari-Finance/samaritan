@@ -14,8 +14,9 @@ class MongoConn:
                              'invite_link': link})
 
     def set_new_ref(self, link, new_ref_user_id):
+        new_ref_user_id = int(new_ref_user_id)
         self.members.update_one({'invite_link': link}, {'$push': {'refs': new_ref_user_id},
-                                                        '$inc': {'refs_size': 1}})
+                                                        '$inc': {'refs_size': 1}}, upsert=True)
 
     def get_members_pts(self):
         c = self.members.find({'refs_size': {'$gt': 0}})
@@ -30,6 +31,7 @@ class MongoConn:
         return c
 
     def remove_ref(self, user_id):
+        user_id = int(user_id)
         self.members.find_one_and_update({'refs': user_id, 'refs_size': {'$gt': 0}},
                                          {'$pull': {'refs': user_id},
                                           '$inc': {'refs_size': -1}})
@@ -91,3 +93,20 @@ class MongoConn:
         self.client = MongoClient(path)
         self.db = self.client['main']
         self._init_cols()
+
+    def set_captcha_status(self, user_id, status: bool):
+        if isinstance(user_id, str):
+            user_id = int(user_id)
+        self.members.update_one({'_id': user_id},
+                                {'$set': {
+                                    'captcha_completed': status
+                                }}, upsert=True)
+
+    def get_captcha_status(self, user_id) -> bool:
+        user_id = int(user_id)
+        try:
+            return self.members.find_one({'_id': user_id}).get('captcha_completed', False)
+
+        except (KeyError, AttributeError, TypeError):
+            self.set_captcha_status(user_id=user_id, status=False)
+            return False
