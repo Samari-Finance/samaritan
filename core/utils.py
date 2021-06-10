@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from io import BytesIO
 from typing import List, Union
@@ -140,10 +141,13 @@ def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext, msg_id):
     :param msg_id: Message id of the request captcha message
     :return: Deeplink to private chat with bot for captcha request
     """
+    user_id = up.chat_member.new_chat_member.user.id if up.chat_member.new_chat_member.user.id else up.effective_user.id
+    chat_id = up.effective_chat.id if up.effective_chat.id else up.message.chat_id
+
     deeplink = f'https://t.me/{ctx.bot.username}?start=' \
                f'{CAPTCHA_PREFIX + CALLBACK_DIVIDER}' \
-               f'{str(up.effective_chat.id) + CALLBACK_DIVIDER}' \
-               f'{str(up.chat_member.new_chat_member.user.id) + CALLBACK_DIVIDER}' \
+               f'{str(chat_id) + CALLBACK_DIVIDER}' \
+               f'{str(user_id) + CALLBACK_DIVIDER}' \
                f'{str(msg_id)}'
     print(f'deeplink: {deeplink}')
     return deeplink
@@ -167,3 +171,8 @@ def pp_json(msg):
     """
     json_str = json.loads(msg)
     print(json.dumps(json_str, indent=3))
+
+
+def setup_log(log_level):
+    logging.basicConfig(level=log_level,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
