@@ -35,18 +35,19 @@ from core import (
 from core.captcha.challenger import Challenger
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
+from core.samaritable import Samaritable
 from core.utils import (
     read_api,
     build_menu,
     send_message,
     regex_req,
-    gen_captcha_request_deeplink
+    gen_captcha_request_deeplink, setup_log
 )
 
 log = logging.getLogger('telegram.bot')
 
 
-class Samaritan:
+class Samaritan(Samaritable):
 
     def __init__(self,
                  api_key_file: str = None,
@@ -58,6 +59,7 @@ class Samaritan:
         self.db = MongoConn(read_api(db_path))
         self.challenger = Challenger(self.db)
         self.add_handles(self.dispatcher)
+        super().__init__()
 
     def gen_handler_attr(self):
         for key in self.db.default_handlers.find():
@@ -66,17 +68,17 @@ class Samaritan:
 
     def gen_handler(self, handler_attr: dict):
 
-        def handler(update, context):
+        def handler(up, ctx):
             if 'command' == handler_attr['type']:
-                return self.gen_command_handler(update, context, handler_attr)
+                return self.gen_command_handler(up, ctx, handler_attr)
             elif 'timed' == handler_attr['type']:
-                return self.gen_timed_handler(update, context, handler_attr)
+                return self.gen_timed_handler(up, ctx, handler_attr)
             elif 'regex' == handler_attr['type']:
-                return self.gen_regex_handler(update, context, handler_attr)
+                return self.gen_regex_handler(up, ctx, handler_attr)
         return handler
 
-    def gen_command_handler(self, update, context, attributes: dict):
-        return send_message(update, context,
+    def gen_command_handler(self, up, ctx, attributes: dict):
+        return send_message(up, ctx,
                             text=attributes['text'],
                             reply=attributes.get('reply', False),
                             parse_mode=attributes.get('parse_mode', DEFAULT_NONE),
@@ -116,9 +118,9 @@ class Samaritan:
             handler_type = resolvers[key['type']]
             dp.add_handler(handler_type(key['aliases'], getattr(self, f"_handler_{key['_id']}")))
 
-    def website_regex(self, update: Update, context):
-        if regex_req(update.message):
-            send_message(update, context, commands['website']['text'], parse_mode=MARKDOWN_V2)
+    def website_regex(self, up: Update, ctx: CallbackContext):
+        if regex_req(up.message):
+            send_message(up, ctx, commands['website']['text'], parse_mode=MARKDOWN_V2)
 
     def chart_regex(self, update, context):
         if regex_req(update.message):
@@ -153,42 +155,43 @@ class Samaritan:
     def _prettify_reference(update: Update, prev_msg):
         return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
 
-    def contest(self, update: Update, context: CallbackContext):
-        user = update.effective_user
-        chat_id = update.effective_chat.id
+    def contest(self, up: Update, ctx: CallbackContext):
+        user = up.effective_user
+        chat_id = up.effective_chat.id
         link = self.db.get_invite_by_user_id(user.id)
         if not link:
-            link = context.bot.create_chat_invite_link(chat_id).invite_link
+            link = ctx.bot.create_chat_invite_link(chat_id).invite_link
             self.db.set_invite_link_by_id(link=link, user_id=user.id)
         else:
             link = link['invite_link']
-        send_message(update, context,
+        send_message(up, ctx,
                      reply=True,
                      text=f'Here is your personal invite link: {link}')
 
-    def member_updated(self, update: Update, context: CallbackContext):
-        if update.chat_member.new_chat_member and update.chat_member.old_chat_member:
-            new_member = update.chat_member.new_chat_member
-            old_member = update.chat_member.old_chat_member
+    def member_updated(self, up: Update, ctx: CallbackContext):
+        if up.chat_member.new_chat_member and up.chat_member.old_chat_member:
+            new_member = up.chat_member.new_chat_member
+            old_member = up.chat_member.old_chat_member
             if self.evaluate_membership(new_member, old_member)[1]:
-                self.left_member(update, context)
+                self.left_member(up, ctx)
             elif self.evaluate_membership(new_member, old_member)[0]:
-                self.new_member(update, context)
-        elif update.chat_member.new_chat_member and not update.chat_member.old_chat_member:
-            self.new_member(update, context)
+                self.new_member(up, ctx)
+        elif up.chat_member.new_chat_member and not up.chat_member.old_chat_member:
+            self.new_member(up, ctx)
 
-    def new_member(self, update: Update, context: CallbackContext):
-        context.bot.restrict_chat_member(chat_id=update.effective_chat.id,
-                                         user_id=update.chat_member.new_chat_member.user.id,
-                                         permissions=ChatPermissions(can_send_messages=False))
-        self.request_captcha(update, context)
+    def new_member(self, up: Update, ctx: CallbackContext):
+        ctx.bot.restrict_chat_member(chat_id=up.effective_chat.id,
+                                     user_id=up.chat_member.new_chat_member.user.id,
+                                     permissions=ChatPermissions(can_send_messages=False))
+        self.request_captcha(up, ctx)
 
-        if update.chat_member.invite_link:
-            link = update.chat_member.invite_link.invite_link
-            self.db.set_new_ref(link, update.effective_user.id)
+        if up.chat_member.invite_link:
+            link = up.chat_member.invite_link.invite_link
+            self.db.set_new_ref(link, up.chat_member.new_chat_member.user.id)
 
-    def left_member(self, update: Update, context: CallbackContext):
-        self.db.remove_ref(user_id=update.effective_user.id)
+    def left_member(self, up: Update, ctx: CallbackContext):
+        self.db.remove_ref(user_id=up.effective_user.id)
+        self.db.set_captcha_status(user_id=up.effective_user.id, status=False)
 
     def leaderboard(self, update: Update, context: CallbackContext):
         limit = 10
@@ -317,7 +320,3 @@ class Samaritan:
         return f"Welcome {up.effective_user.name}, to Samari Finance ❤️\n" \
                f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
 
-
-def setup_log(log_level):
-    logging.basicConfig(level=log_level,
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
