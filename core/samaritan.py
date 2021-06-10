@@ -37,7 +37,7 @@ from core.default_commands import commands
 from core.db.mongo_db import MongoConn
 from core.utils.test import dump_obj
 from core.samaritable import Samaritable
-from core.utils import (
+from core.utils.utils import (
     read_api,
     build_menu,
     send_message,
