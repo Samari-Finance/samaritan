@@ -59,7 +59,8 @@ class Samaritan(Samaritable):
         self.updater = Updater(token=read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
         self.db = MongoConn(read_api(db_path))
-        self.challenger = Challenger(self.db)
+        self.current_captchas = {}
+        self.challenger = Challenger(self.db, self.current_captchas)
         self.add_handles(self.dispatcher)
         super().__init__()
 
@@ -221,12 +222,14 @@ class Samaritan(Samaritable):
             elif (old_status == MEMBER or old_status == ADMIN or old_status == CREATOR) and \
                     (new_status == KICKED or new_status == LEFT):
                 just_left = True
+        elif new_status and not old_status:
+            just_joined = True
 
         print(f'just_joined: {just_joined}, just_left: {just_left}')
         return just_joined, just_left
 
     def request_captcha(self, up: Update, ctx: CallbackContext):
-        url = gen_captcha_request_deeplink(up, ctx, -1)
+        url = gen_captcha_request_deeplink(up, ctx)
         button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
         msg = send_message(
@@ -234,14 +237,8 @@ class Samaritan(Samaritable):
             reply_markup=reply_markup,
             update=up,
             context=ctx)
-        url = gen_captcha_request_deeplink(up, ctx, msg.message_id)
-        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
-        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
-        ctx.bot.edit_message_reply_markup(
-            chat_id=up.effective_chat.id,
-            message_id=msg.message_id,
-            reply_markup=reply_markup
-        )
+        if not self.current_captchas.get(up.effective_user.id, None):
+            self.current_captchas[url.split('_')[-1]] = {"pub_msg": msg}
 
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
@@ -249,7 +246,7 @@ class Samaritan(Samaritable):
     def add_handles(self, dp):
         dp.add_handler(CommandHandler('start',
                                       self.challenger.captcha_deeplink,
-                                      Filters.regex(r'captcha_([a-zA-Z0-9]*)'),
+                                      Filters.regex(r'captcha_([_a-zA-Z0-9-]*)'),
                                       pass_args=True))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))

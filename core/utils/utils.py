@@ -133,11 +133,10 @@ def build_menu(
     return menu
 
 
-def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext, msg_id):
+def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
     """Generates a new captcha request deeplink based on incoming Update and bot.CallbackContext
     :param up: Incoming telegram.Update
     :param ctx: CallbackContext for bot
-    :param msg_id: Message id of the request captcha message
     :return: Deeplink to private chat with bot for captcha request
     """
     user_id = up.chat_member.new_chat_member.user.id if up.chat_member.new_chat_member.user.id else up.effective_user.id
@@ -146,8 +145,7 @@ def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext, msg_id):
     deeplink = f'https://t.me/{ctx.bot.username}?start=' \
                f'{CAPTCHA_PREFIX + CALLBACK_DIVIDER}' \
                f'{str(chat_id) + CALLBACK_DIVIDER}' \
-               f'{str(user_id) + CALLBACK_DIVIDER}' \
-               f'{str(msg_id)}'
+               f'{str(user_id)}'
     print(f'deeplink: {deeplink}')
     return deeplink
 
@@ -173,6 +171,7 @@ def gen_filter(aliases: list):
         expr = expr | Filters.regex(re.compile(alias+r'\??', re.IGNORECASE))
     print(expr)
     return expr
+
 
 def setup_log(log_level):
     logging.basicConfig(level=log_level,
