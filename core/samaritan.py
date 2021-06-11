@@ -54,11 +54,11 @@ log = logging.getLogger('telegram.bot')
 class Samaritan(Samaritable):
 
     def __init__(self,
-                 api_key_file: str = None,
-                 db_path: str = None,
+                 tg_api_path: str = None,
+                 db_api_path: str = None,
                  log_level: logging = logging.INFO):
         setup_log(log_level=log_level)
-        self.updater = Updater(token=read_api(api_key_file), use_context=True)
+        self.updater = Updater(token=read_api(tg_api_path), use_context=True)
         self.dispatcher = self.updater.dispatcher
         self.db = MongoConn(read_api(db_api_path))
         self.graphql = GraphQLClient()
@@ -172,6 +172,9 @@ class Samaritan(Samaritable):
         self.request_captcha(up, ctx)
 
         if up.chat_member.invite_link:
+            self.log.info('User has joined using invite link: { name: %s, link: %s }',
+                          str(up.chat_member.new_chat_member.user.id),
+                          str(up.chat_member.invite_link))
             link = up.chat_member.invite_link.invite_link
             self.db.set_new_ref(link, up.chat_member.new_chat_member.user.id)
 
@@ -242,20 +245,30 @@ class Samaritan(Samaritable):
         elif new_status and not old_status:
             just_joined = True
 
-        print(f'just_joined: {just_joined}, just_left: {just_left}')
+        if just_joined:
+            self.log.info('User has joined the chat: { name: %s, id: %s }',
+                          str(new_member.user.name),
+                          str(new_member.user.id))
+        elif just_left:
+            self.log.info('User has left the chat: { name: %s, id: %s }',
+                          str(new_member.user.name),
+                          str(new_member.user.id))
         return just_joined, just_left
 
     def request_captcha(self, up: Update, ctx: CallbackContext):
         url = gen_captcha_request_deeplink(up, ctx)
         button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
+        self.log.debug('Requesting captcha:{ deeplink=%s', url)
         msg = send_message(
             text=self.captcha_text(up, ctx),
             reply_markup=reply_markup,
             update=up,
             context=ctx)
         if not self.current_captchas.get(up.effective_user.id, None):
-            self.current_captchas[url.split('_')[-1]] = {"pub_msg": msg}
+            self.current_captchas[url.split('_')[-1]] = {
+                "pub_msg": msg,
+                "attempts": 0}
 
     def start_polling(self):
         self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
