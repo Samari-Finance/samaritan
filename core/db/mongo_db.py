@@ -52,7 +52,8 @@ class MongoConn:
 
     def get_text_by_handler(self, key: str):
         try:
-            text = self.handlers.find_one({'_id': key})['text']
+            #  text = self.handlers.find_one({'_id': key})['text']
+            text = self.default_handlers.find_one({'_id': key})['text']
         except TypeError:
             try:
                 text = self.default_handlers.find_one({'_id': key})['text']
