@@ -123,15 +123,15 @@ class Challenger(Samaritable):
         """
         chat_id = payload[1]
         user_id = payload[2]
-        msg_id = self._get_priv_msg(user_id).message_id
+        priv_msg = self._get_priv_msg(user_id)
         new_ch = Challenge()
 
         img, reply_markup = self.challenge_to_reply_markup(
-            up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id, msg_id))
+            up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id))
 
         msg = ctx.bot.edit_message_media(
-            chat_id=self.current_captchas[user_id]['msg'].chat_id,
-            message_id=self.current_captchas[user_id]['msg'].message_id,
+            chat_id=priv_msg.chat_id,
+            message_id=priv_msg.message_id,
             media=InputMediaPhoto(
                 media=img,
                 caption=self.extend_captcha_caption(user_id),
@@ -167,17 +167,20 @@ class Challenger(Samaritable):
             up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id))
 
         up.callback_query.answer(self.db.get_text_by_handler('captcha_failed'))
-        msg = ctx.bot.edit_message_media(
-            chat_id=self.current_captchas[user_id]['msg'].chat_id,
-            message_id=self.current_captchas[user_id]['msg'].message_id,
-            media=InputMediaPhoto(
-                media=img,
-                caption=self.extend_captcha_caption(user_id),
-                parse_mode=MARKDOWN_V2),
-            reply_markup=reply_markup,
-        )
-        self.current_captchas[user_id]['msg'] = msg
-        self.current_captchas[user_id]['ch'] = new_ch
+        try:
+            msg = ctx.bot.edit_message_media(
+                chat_id=priv_msg.chat_id,
+                message_id=priv_msg.message_id,
+                media=InputMediaPhoto(
+                    media=img,
+                    caption=self.extend_captcha_caption(user_id),
+                    parse_mode=MARKDOWN_V2),
+                reply_markup=reply_markup,
+            )
+            self.current_captchas[user_id]['priv_msg'] = msg
+            self.current_captchas[user_id]['ch'] = new_ch
+        except BadRequest as e:
+            self.log.exception(e)
 
     @wraps_log
     def captcha_completed(self, up: Update, ctx: CallbackContext, payload) -> None:
@@ -265,16 +268,16 @@ class Challenger(Samaritable):
                            private_chat_id: Union[str, int],
                            user_id: Union[str, int],
                            priv_msg: Message,
-                           pub_msg) -> None:
+                           pub_msg: Message) -> None:
         def once(ctx: CallbackContext):
             if not self.db.get_captcha_status(user_id):
-                print(f'Kicking {user_id} from {chat_id}, and deleting {pub_msg} from {chat_id}'
-                      f' and {priv_msg.message_id} from {private_chat_id}')
-                self.log.debug(
-                    f'Kicking {user_id} from {chat_id}, and deleting {pub_msg} from {chat_id}'
-                    f' and {priv_msg.message_id} from {private_chat_id}')
+                for element in [chat_id, private_chat_id, user_id, private_chat_id, user_id, priv_msg.message_id, pub_msg.message_id]:
+                    if isinstance(element, int):
+                        element = str(element)
+                self.log.debug('Kicking %s from %s, and deleting %s from %s and %s from %s',
+                               user_id, chat_id, pub_msg.message_id, chat_id, priv_msg.message_id, private_chat_id)
                 ctx.bot.kick_chat_member(chat_id=chat_id, user_id=user_id)
-                ctx.bot.delete_message(chat_id=chat_id, message_id=pub_msg)
+                ctx.bot.delete_message(chat_id=chat_id, message_id=pub_msg.message_id)
                 ctx.bot.delete_message(chat_id=private_chat_id, message_id=priv_msg.message_id)
                 self.db.remove_ref(user_id)
                 self.db.set_captcha_status(user_id, False)
@@ -336,7 +339,7 @@ class Challenger(Samaritable):
         if not current_user:
             attempts_left = MAX_ATTEMPTS
         else:
-            attempts_left = MAX_ATTEMPTS - current_user['attempts']
+            attempts_left = MAX_ATTEMPTS - current_user.get('attempts', 0)
         return caption + f"\n\n             \\>\\>\\> *__{attempts_left}__* *_ATTEMPTS LEFT_* \\<\\<\\<"
 
     @staticmethod
