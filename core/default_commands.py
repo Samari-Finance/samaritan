@@ -97,9 +97,11 @@ commands = {
                       '=0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be',
               'regex': ['pcs', 'pancakeswap'],
               'aliases': ['trade', 'buy']},
-    "price": {'text': 'Live price has not been implemented yet, sorry'},  # todo
-    "mc": {'text': 'Live market cap has not been implemented yet, sorry',
-           'aliases': ['mc', 'marketcap']},  # todo
+    "price": {'text': '🚀 Current price of $SAMA is: $',
+              'type': 'util'},
+    "mc": {'text': '🚀 Current market cap of $SAMA is: $',
+           'type': 'util',
+           'aliases': ['mc', 'marketcap']},
     "shillist": {'text': '\n@uniswaptalk\n@gemcollectors\n@cryptoM00NShots\n@gemdiscussion\n@gemtalkc\n@rocketmangem'
                           '\n@dexgemschat\n@moonhunters\n@uniswapresearch\n@infinitygainzz\n@InfinityBotz'
                           '\n@tehMoonwalkeRs\n@uniswaplegit\n@uniswapgemtargets\n@acmecrypto\n@cryptomindsgroup'
