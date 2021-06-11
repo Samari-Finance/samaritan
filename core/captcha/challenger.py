@@ -1,6 +1,5 @@
-import logging
 import random
-from datetime import timedelta, datetime
+from datetime import timedelta
 from typing import Union
 
 from PIL import Image, ImageFont
@@ -12,7 +11,7 @@ from telegram.ext import CallbackContext
 from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, CAPTCHA_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
-from core.utils.utils import build_menu, send_image, send_message
+from core.utils.utils import build_menu, send_image, send_message, wraps_log
 from core.samaritable import Samaritable
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
@@ -31,8 +30,6 @@ points_max = int(50 * multiplier)
 
 MAX_ATTEMPTS = 4
 
-log = logging.getLogger('telegram.bot')
-
 
 class Challenger(Samaritable):
 
@@ -43,6 +40,7 @@ class Challenger(Samaritable):
         self.current_captchas = current_captchas
         super().__init__()
 
+    @wraps_log
     def captcha_deeplink(self, up: Update, ctx: CallbackContext) -> None:
         """Entrance handle callback for captcha deeplinks. Generates new challenge,
         presents it to the user, and saves the sent msg in current_captchas to retrieve the id
@@ -55,8 +53,11 @@ class Challenger(Samaritable):
         payload = ctx.args[0].split(CALLBACK_DIVIDER)
         chat_id = payload[1]
         user_id = payload[2]
-        pub_msg_id = self.current_captchas[user_id]
-        self.log.debug('Captcha deeplink:{ chat_id: %s, user_id: %s, pub_msg_id: %s }', chat_id, user_id, pub_msg_id)
+        pub_msg = self.current_captchas[user_id]['pub_msg']
+        self.log.debug('Captcha deeplink:{ chat_id: %s, user_id: %s, pub_msg_id: %s }',
+                       str(chat_id),
+                       str(user_id),
+                       str(pub_msg.message_id))
 
         if not self.current_captchas.get(user_id).get('priv_msg'):
             ch = Challenge()
@@ -78,11 +79,12 @@ class Challenger(Samaritable):
                                     chat_id=chat_id,
                                     private_chat_id=msg.chat_id,
                                     user_id=user_id,
-                                    pub_msg=pub_msg_id,
-                                    priv_msg=msg.message_id)
+                                    pub_msg=pub_msg,
+                                    priv_msg=msg)
         else:
             ch = self.current_captchas[user_id]['ch']
 
+    @wraps_log
     def captcha_callback(self, up: Update, ctx: CallbackContext) -> None:
         """Determines if answer to captcha is correct or not,
         and calls the respective outcome's method.
@@ -109,6 +111,7 @@ class Challenger(Samaritable):
         else:
             self.captcha_failed(up, ctx, payload)
 
+    @wraps_log
     def captcha_refresh(self, up: Update, ctx: CallbackContext, payload) -> None:
         """Handles captcha refreshes. Displays a new captcha without incrementing the
         user's attempts.
@@ -138,6 +141,7 @@ class Challenger(Samaritable):
         self.current_captchas[user_id]['msg'] = msg
         self.current_captchas[user_id]['ch'] = new_ch
 
+    @wraps_log
     def captcha_failed(self, up: Update, ctx: CallbackContext, payload) -> None:
         """Handles incorrect captcha responses. The captcha image and KeyboardMarkup is
         replaced with a new challenge's.
@@ -152,10 +156,11 @@ class Challenger(Samaritable):
         priv_msg = self._get_priv_msg(user_id)
         pub_msg = self._get_public_msg(user_id)
         new_ch = Challenge()
-        self.log.debug('Captcha failed:{ chat_id: %s, user_id: %s, pub_msg_id: %s }',
-                       chat_id,
-                       user_id,
-                       str(pub_msg.message_id))
+        self.log.debug('Captcha failed:{ chat_id: %s, user_id: %s, pub_msg_id: %s, priv_msg_id: %s}',
+                       str(chat_id),
+                       str(user_id),
+                       str(pub_msg.message_id),
+                       str(priv_msg.message_id))
 
         self.current_captchas[user_id]['attempts'] += 1
         img, reply_markup = self.challenge_to_reply_markup(
@@ -174,6 +179,7 @@ class Challenger(Samaritable):
         self.current_captchas[user_id]['msg'] = msg
         self.current_captchas[user_id]['ch'] = new_ch
 
+    @wraps_log
     def captcha_completed(self, up: Update, ctx: CallbackContext, payload) -> None:
         """Handles a correct captcha, gives user back their rights, and replaces captcha with
         informational message.
@@ -219,6 +225,7 @@ class Challenger(Samaritable):
         self.db.set_captcha_status(user_id, True)
         self.current_captchas.pop(str(user_id), None)
 
+    @wraps_log
     def challenge_to_reply_markup(
             self,
             up: Update,
@@ -250,6 +257,7 @@ class Challenger(Samaritable):
         ))
         return img, reply_markup
 
+    @wraps_log
     def kick_if_incomplete(self,
                            up: Update,
                            ctx: CallbackContext,

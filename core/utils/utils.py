@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from functools import wraps
 from io import BytesIO
 from typing import List, Union
 
@@ -176,3 +177,11 @@ def gen_filter(aliases: list):
 def setup_log(log_level):
     logging.basicConfig(level=log_level,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+
+def wraps_log(method):
+    @wraps(method)
+    def _impl(self, *args, **kwargs):
+        self.log.debug('Current captchas: %s', str(self.current_captchas))
+        return method(self, *args, **kwargs)
+    return _impl
