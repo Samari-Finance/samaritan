@@ -7,6 +7,7 @@
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
+from pprint import pprint
 from typing import Callable
 
 from telegram import (
@@ -32,6 +33,7 @@ from core import (
     MARKDOWN_V2,
     LEFT, KICKED, RESTRICTED, MEMBER, ADMIN, CREATOR, REGEX, COMMAND, TIMED, CAPTCHA, UTIL
 )
+from core.bitquery.graphcli import GraphQLClient
 from core.captcha.challenger import Challenger
 from core.default_commands import commands
 from core.db.mongo_db import MongoConn
@@ -58,7 +60,8 @@ class Samaritan(Samaritable):
         setup_log(log_level=log_level)
         self.updater = Updater(token=read_api(api_key_file), use_context=True)
         self.dispatcher = self.updater.dispatcher
-        self.db = MongoConn(read_api(db_path))
+        self.db = MongoConn(read_api(db_api_path))
+        self.graphql = GraphQLClient()
         self.current_captchas = {}
         self.challenger = Challenger(self.db, self.current_captchas)
         self.add_handles(self.dispatcher)
@@ -82,6 +85,8 @@ class Samaritan(Samaritable):
                 return self.gen_timed_handler(update, context, handler_attr)
             elif REGEX == handler_type:
                 return self.gen_regex_handler(update, context, handler_attr)
+            else:
+                raise KeyError('Unknown handler type: {}'.format(str(handler_type)))
 
         return handler
 
@@ -106,7 +111,7 @@ class Samaritan(Samaritable):
             setattr(self, timer_str, now)
         else:
             send_message(up, ctx,
-                         text=self._prettify_reference(up, getattr(self, msg_str).message_id.real),
+                         text=self._format_reference(up, getattr(self, msg_str).message_id.real),
                          parse_mode=MARKDOWN_V2)
 
     def gen_regex_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
@@ -200,14 +205,26 @@ class Samaritan(Samaritable):
         except ValueError:
             send_message(update, context, f'Invalid argument: {context.args} for leaderboard command')
 
-    @staticmethod
-    def evaluate_membership(new_member, old_member):
+    def price(self, up: Update, ctx: CallbackContext):
+        response = self.graphql.q_price()
+        buy_amount = self._dex_trades(response)['buyAmount']
+        sell_amount_usd = self._dex_trades(response)['sellAmountInUsd']
+        price = sell_amount_usd / buy_amount
+        text = self.db.get_text_by_handler('price')+self._format_price(price)
+        send_message(up, ctx, text, parse_mode=MARKDOWN_V2)
+
+    def mc(self, up: Update, ctx: CallbackContext):
+        response = self.graphql.q_price()
+        buy_amount = self._dex_trades(response)['buyAmount']
+        sell_amount_usd = self._dex_trades(response)['sellAmountInUsd']
+        price = sell_amount_usd / buy_amount
+        mc = price * 1273628335437
+        print(f"mc: {mc}")
+        send_message(up, ctx, self.db.get_text_by_handler('mc')+self._format_mc(mc), parse_mode=MARKDOWN_V2)
+
+    def evaluate_membership(self, new_member, old_member):
         old_status = old_member.status
         new_status = new_member.status
-
-        print(f'old_status: {old_status}')
-        print(f'new_status: {new_status}')
-
         just_joined = False
         just_left = False
 
@@ -250,11 +267,17 @@ class Samaritan(Samaritable):
                                       pass_args=True))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
+        dp.add_handler(CommandHandler('price', self.price))
+        dp.add_handler(CommandHandler('mc', self.mc))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
         self.add_dp_handlers(dp)
         dump_obj(self)
+
+    @staticmethod
+    def _dex_trades(path: dict):
+        return path['data']['ethereum']['dexTrades'][0]
 
     @staticmethod
     def captcha_text(up: Update, ctx: CallbackContext):
@@ -280,6 +303,16 @@ class Samaritan(Samaritable):
         return inner
 
     @staticmethod
-    def _prettify_reference(update: Update, prev_msg):
+    def _format_reference(update: Update, prev_msg):
         return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
+
+    @staticmethod
+    def _format_price(price):
+        return '_*'+f"{price:.12f}".replace('.', '\\.')+'*_'
+
+    @staticmethod
+    def _format_mc(mc):
+        return '_*'+f"{mc:,.2f}".replace('.', '\\.')+'*_'
+
+
 
