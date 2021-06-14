@@ -9,7 +9,7 @@ class Samaritable:
         self.name = name
 
     def _aggregate_log_name(self):
-        if self.__class__.__name__.lower() == 'samaritable':
+        if self.__class__.__name__.lower() == 'samaritable' or self.__class__.__name__.lower() == 'samaritan':
             name = 'samaritan'
         else:
             name = 'samaritan.'+self.__class__.__name__.lower()
