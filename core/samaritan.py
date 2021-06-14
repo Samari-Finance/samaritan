@@ -148,13 +148,12 @@ class Samaritan(Samaritable):
         if not link:
             link = ctx.bot.create_chat_invite_link(chat_id).invite_link
             self.db.set_invite_link_by_id(link=link, user_id=user.id)
-        else:
-            link = link['invite_link']
         send_message(up, ctx,
                      reply=True,
                      text=f'Here is your personal invite link: {link}')
 
     def member_updated(self, up: Update, ctx: CallbackContext):
+        pprint(up.chat_member.to_json())
         if up.chat_member.new_chat_member and up.chat_member.old_chat_member:
             new_member = up.chat_member.new_chat_member
             old_member = up.chat_member.old_chat_member
@@ -166,17 +165,19 @@ class Samaritan(Samaritable):
             self.new_member(up, ctx)
 
     def new_member(self, up: Update, ctx: CallbackContext):
+        invite_link = up.chat_member.invite_link
+        self.request_captcha(up, ctx)
+
+        if invite_link:
+            self.log.info('User has joined using invite link: { name: %s, link: %s }',
+                          str(up.chat_member.new_chat_member.user.id),
+                          str(invite_link.invite_link))
+            link = invite_link.invite_link
+            self.db.set_new_ref(link, up.chat_member.new_chat_member.user.id)
+
         ctx.bot.restrict_chat_member(chat_id=up.effective_chat.id,
                                      user_id=up.chat_member.new_chat_member.user.id,
                                      permissions=ChatPermissions(can_send_messages=False))
-        self.request_captcha(up, ctx)
-
-        if up.chat_member.invite_link:
-            self.log.info('User has joined using invite link: { name: %s, link: %s }',
-                          str(up.chat_member.new_chat_member.user.id),
-                          str(up.chat_member.invite_link))
-            link = up.chat_member.invite_link.invite_link
-            self.db.set_new_ref(link, up.chat_member.new_chat_member.user.id)
 
     def left_member(self, up: Update, ctx: CallbackContext):
         self.db.remove_ref(user_id=up.effective_user.id)
@@ -271,7 +272,7 @@ class Samaritan(Samaritable):
                 "attempts": 0}
 
     def start_polling(self):
-        self.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+        self.updater.start_polling(allowed_updates=[Update.ALL_TYPES, 'chat_member'])
 
     def add_handles(self, dp):
         dp.add_handler(CommandHandler('start',
@@ -282,10 +283,10 @@ class Samaritan(Samaritable):
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(CommandHandler('price', self.price))
         dp.add_handler(CommandHandler('mc', self.mc))
-        dp.add_handler(ChatMemberHandler(
-            chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
         self.add_dp_handlers(dp)
+        dp.add_handler(ChatMemberHandler(
+            chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dump_obj(self)
 
     @staticmethod
