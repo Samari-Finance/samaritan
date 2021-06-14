@@ -10,8 +10,8 @@ class MongoConn:
         self._init_conn(path)
 
     def set_invite_link_by_id(self, link, user_id):
-        self.members.insert({'_id': user_id,
-                             'invite_link': link})
+        self.members.update_one({'_id': user_id},
+                                {'$set': {'invite_link': link}}, upsert=True)
 
     def set_new_ref(self, link, new_ref_user_id):
         new_ref_user_id = int(new_ref_user_id)
@@ -28,6 +28,8 @@ class MongoConn:
 
     def get_invite_by_user_id(self, user_id):
         c = self.members.find_one({'_id': user_id})
+        if c:
+            c = c.get('invite_link', None)
         return c
 
     def remove_ref(self, user_id):
