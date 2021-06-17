@@ -1,13 +1,12 @@
 import logging
 import os
-import re
 from functools import wraps
 from io import BytesIO
 from typing import List, Union
 
 from PIL.Image import Image
 from telegram import Update, InlineKeyboardButton, Message
-from telegram.ext import CallbackContext, Filters
+from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
 
 from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER
@@ -161,27 +160,26 @@ def regex_req(msg: Message, req_len=4):
     return len(msg.text.split()) < req_len
 
 
-def gen_filter(aliases: list):
-    """Generates a regex expression based on a list of aliases
-
-    :param aliases: List of aliases to
-    :return: regex expression which has
-    """
-    expr = Filters.regex(re.compile(aliases[0]+r'\??', re.IGNORECASE))
-    for alias in aliases[1:]:
-        expr = expr | Filters.regex(re.compile(alias+r'\??', re.IGNORECASE))
-    print(expr)
-    return expr
-
-
 def setup_log(log_level):
     logging.basicConfig(level=log_level,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
-def wraps_log(method):
+def log_curr_captchas(method):
     @wraps(method)
     def _impl(self, *args, **kwargs):
         self.log.debug('Current captchas: %s', str(self.current_captchas))
         return method(self, *args, **kwargs)
+    return _impl
+
+
+def log_entexit(method):
+    @wraps(method)
+    def _impl(self, *args, **kwargs):
+        self.log.debug('Entering: %s', method.__name__)
+        tmp = method(self, *args, **kwargs)
+        if tmp:
+            self.log.debug('%s', tmp)
+        self.log.debug('Exiting: %s', method.__name__)
+        return tmp
     return _impl
