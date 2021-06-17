@@ -5,10 +5,10 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, InputMe
 from telegram.error import BadRequest
 from telegram.ext import CallbackContext
 
-from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, CAPTCHA_PREFIX, MARKDOWN_V2
+from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
-from core.utils.utils import build_menu, send_image, send_message, log_curr_captchas, log_entexit
+from core.utils.utils import send_image, send_message, log_curr_captchas, log_entexit
 from core.samaritable import Samaritable
 
 MAX_ATTEMPTS = 4
