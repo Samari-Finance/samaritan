@@ -308,14 +308,3 @@ class Samaritan(Samaritable):
     @staticmethod
     def _format_reference(update: Update, prev_msg):
         return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
-
-    @staticmethod
-    def _format_price(price):
-        return '_*'+f"{price:.12f}".replace('.', '\\.')+'*_'
-
-    @staticmethod
-    def _format_mc(mc):
-        return '_*'+f"{mc:,.2f}".replace('.', '\\.')+'*_'
-
-
-
