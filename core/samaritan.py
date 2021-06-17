@@ -134,6 +134,7 @@ class Samaritan(Samaritable):
         aliases = aliases if aliases else key['aliases']
         dp.add_handler(MessageHandler(gen_filter(aliases), getattr(self, self.get_handler_name(key, REGEX))))
 
+    @log_entexit
     def contest(self, up: Update, ctx: CallbackContext):
         user = up.effective_user
         chat_id = up.effective_chat.id
@@ -145,6 +146,7 @@ class Samaritan(Samaritable):
                      reply=True,
                      text=f'Here is your personal invite link: {link}')
 
+    @log_entexit
     def member_updated(self, up: Update, ctx: CallbackContext):
         pprint(up.chat_member.to_json())
         if up.chat_member.new_chat_member and up.chat_member.old_chat_member:
@@ -157,6 +159,7 @@ class Samaritan(Samaritable):
         elif up.chat_member.new_chat_member and not up.chat_member.old_chat_member:
             self.new_member(up, ctx)
 
+    @log_entexit
     def new_member(self, up: Update, ctx: CallbackContext):
         invite_link = up.chat_member.invite_link
         self.request_captcha(up, ctx)
@@ -172,11 +175,13 @@ class Samaritan(Samaritable):
                                      user_id=up.chat_member.new_chat_member.user.id,
                                      permissions=ChatPermissions(can_send_messages=False))
 
+    @log_entexit
     def left_member(self, up: Update, ctx: CallbackContext):
         self.db.remove_ref(user_id=up.effective_user.id)
         self.db.set_captcha_status(user_id=up.effective_user.id, status=False)
 
-    def leaderboard(self, update: Update, context: CallbackContext):
+    @log_entexit
+    def leaderboard(self, up: Update, ctx: CallbackContext):
         limit = 10
         counter = 1
         chat = update.effective_chat
@@ -202,6 +207,7 @@ class Samaritan(Samaritable):
         except ValueError:
             send_message(update, context, f'Invalid argument: {context.args} for leaderboard command')
 
+    @log_entexit
     def price(self, up: Update, ctx: CallbackContext):
         response = self.graphql.q_price()
         buy_amount = self._dex_trades(response)['buyAmount']
@@ -210,6 +216,7 @@ class Samaritan(Samaritable):
         text = self.db.get_text_by_handler('price')+self._format_price(price)
         send_message(up, ctx, text, parse_mode=MARKDOWN_V2)
 
+    @log_entexit
     def mc(self, up: Update, ctx: CallbackContext):
         response = self.graphql.q_price()
         buy_amount = self._dex_trades(response)['buyAmount']
@@ -219,6 +226,7 @@ class Samaritan(Samaritable):
         print(f"mc: {mc}")
         send_message(up, ctx, self.db.get_text_by_handler('mc')+self._format_mc(mc), parse_mode=MARKDOWN_V2)
 
+    @log_entexit
     def evaluate_membership(self, new_member, old_member):
         old_status = old_member.status
         new_status = new_member.status
@@ -249,6 +257,7 @@ class Samaritan(Samaritable):
                           str(new_member.user.id))
         return just_joined, just_left
 
+    @log_entexit
     def request_captcha(self, up: Update, ctx: CallbackContext):
         url = gen_captcha_request_deeplink(up, ctx)
         button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
@@ -267,6 +276,7 @@ class Samaritan(Samaritable):
     def start_polling(self):
         self.updater.start_polling(allowed_updates=[Update.ALL_TYPES, 'chat_member'])
 
+    @log_entexit
     def add_handles(self, dp):
         dp.add_handler(CommandHandler('start',
                                       self.challenger.captcha_deeplink,
