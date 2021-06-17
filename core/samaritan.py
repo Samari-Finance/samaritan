@@ -269,27 +269,22 @@ class Samaritan(Samaritable):
 
     @log_entexit
     def add_handles(self, dp):
-        dp.add_handler(CommandHandler('start',
-                                      self.challenger.captcha_deeplink,
-                                      Filters.regex(r'captcha_([_a-zA-Z0-9-]*)'),
-                                      pass_args=True))
+        dp.add_handler(ChatMemberHandler(
+            chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
         dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
         dp.add_handler(CommandHandler('price', self.price))
         dp.add_handler(CommandHandler('mc', self.mc))
+        dp.add_handler(CommandHandler('start',
+                                      self.challenger.captcha_deeplink,
+                                      Filters.regex(r'captcha_([_a-zA-Z0-9-]*)'),
+                                      pass_args=True))
         dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
         self.add_dp_handlers(dp)
-        dp.add_handler(ChatMemberHandler(
-            chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
-        dump_obj(self)
-
-    @staticmethod
-    def _dex_trades(path: dict):
-        return path['data']['ethereum']['dexTrades'][0]
 
     @staticmethod
     def captcha_text(up: Update, ctx: CallbackContext):
-        return f"Welcome {up.effective_user.name}, to Samari Finance ❤️\n" \
+        return f"Welcome {up.chat_member.new_chat_member.user.name}, to Samari Finance ❤️\n" \
                f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
 
     @staticmethod
