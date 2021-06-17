@@ -80,8 +80,6 @@ class GraphQLClient(Samaritable):
                 sell_amount = trade['sellAmount']
                 prices.append(buy_amount_usd / sell_amount)
 
-        print(prices)
-
         return mean(prices)
 
     @log_entexit
