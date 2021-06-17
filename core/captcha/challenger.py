@@ -45,7 +45,7 @@ class Challenger(Samaritable):
 
         if not self.current_captchas.get(user_id).get('priv_msg'):
             ch = Challenge()
-            img, reply_markup = self.challenge_to_reply_markup(up, ctx, ch, ctx.args[0])
+            img, reply_markup = ch.gen_img_markup(up, ctx, ctx.args[0])
             msg = send_image(
                 up,
                 ctx,
@@ -110,8 +110,8 @@ class Challenger(Samaritable):
         priv_msg = self._get_priv_msg(user_id)
         new_ch = Challenge()
 
-        img, reply_markup = self.challenge_to_reply_markup(
-            up, ctx, new_ch, self.gen_captcha_callback(chat_id, user_id))
+        img, reply_markup = new_ch.gen_img_markup(
+            up, ctx, self.gen_captcha_callback(chat_id, user_id))
 
         msg = ctx.bot.edit_message_media(
             chat_id=priv_msg.chat_id,
