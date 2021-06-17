@@ -138,17 +138,16 @@ class Samaritan(Samaritable):
     def contest(self, up: Update, ctx: CallbackContext):
         user = up.effective_user
         chat_id = up.effective_chat.id
-        link = self.db.get_invite_by_user_id(user.id)
+        link = self.db.get_invite_by_user_id(chat_id, user.id)
         if not link:
             link = ctx.bot.create_chat_invite_link(chat_id).invite_link
-            self.db.set_invite_link_by_id(link=link, user_id=user.id)
+            self.db.set_invite_link_by_id(chat_id=chat_id, link=link, user_id=user.id)
         send_message(up, ctx,
                      reply=True,
                      text=f'Here is your personal invite link: {link}')
 
     @log_entexit
     def member_updated(self, up: Update, ctx: CallbackContext):
-        pprint(up.chat_member.to_json())
         if up.chat_member.new_chat_member and up.chat_member.old_chat_member:
             new_member = up.chat_member.new_chat_member
             old_member = up.chat_member.old_chat_member
@@ -165,11 +164,11 @@ class Samaritan(Samaritable):
         self.request_captcha(up, ctx)
 
         if invite_link:
-            self.log.info('User has joined using invite link: { name: %s, link: %s }',
+            self.log.info('User has joined using invite link: {name: %s, link: %s}',
                           str(up.chat_member.new_chat_member.user.id),
                           str(invite_link.invite_link))
             link = invite_link.invite_link
-            self.db.set_new_ref(link, up.chat_member.new_chat_member.user.id)
+            self.db.set_new_ref(up.effective_chat.id, link, up.chat_member.new_chat_member.user.id)
 
         ctx.bot.restrict_chat_member(chat_id=up.effective_chat.id,
                                      user_id=up.chat_member.new_chat_member.user.id,
@@ -177,15 +176,15 @@ class Samaritan(Samaritable):
 
     @log_entexit
     def left_member(self, up: Update, ctx: CallbackContext):
-        self.db.remove_ref(user_id=up.effective_user.id)
-        self.db.set_captcha_status(user_id=up.effective_user.id, status=False)
+        self.db.remove_ref(chat_id=up.effective_chat.id, user_id=up.effective_user.id)
+        self.db.set_captcha_status(chat_id=up.effective_chat.id, user_id=up.effective_user.id, status=False)
 
     @log_entexit
     def leaderboard(self, up: Update, ctx: CallbackContext):
         limit = 10
         counter = 1
-        chat = update.effective_chat
-        user = update.effective_user
+        chat_id = up.effective_chat
+        user_id = up.effective_user
         msg = f'🏆 INVITE CONTEST LEADERBOARD 🏆\n\n'
         scoreboard = sorted(self.db.get_members_pts(), key=lambda i: i['pts'])
 
