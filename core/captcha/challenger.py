@@ -58,10 +58,11 @@ class Challenger(Samaritable):
                 priv_msg=msg,
                 ch=ch,
                 attempts=0)
-            self.db.set_captcha_status(user_id, False)
+            self.db.set_private_chat_id(chat_id, user_id, up.effective_chat.id)
+            self.db.set_captcha_status(chat_id, user_id, False)
             self.kick_if_incomplete(up, ctx,
                                     chat_id=chat_id,
-                                    private_chat_id=msg.chat_id,
+                                    priv_chat_id=msg.chat_id,
                                     user_id=user_id,
                                     pub_msg=pub_msg,
                                     priv_msg=msg)
@@ -134,6 +135,7 @@ class Challenger(Samaritable):
         chat_id = payload[1]
         user_id = payload[2]
         priv_msg = self._get_priv_msg(user_id)
+        priv_chat_id = self._get_priv_msg(user_id).chat_id
         pub_msg = self._get_public_msg(user_id)
         new_ch = Challenge()
         self.log.debug('Captcha failed:{ chat_id: %s, user_id: %s, pub_msg_id: %s, priv_msg_id: %s}',
@@ -180,10 +182,11 @@ class Challenger(Samaritable):
         self.log.debug('Payload: %s', payload)
         ctx.bot.restrict_chat_member(chat_id, user_id, permissions=MEMBER_PERMISSIONS)
         ctx.bot.unban_chat_member(chat_id, user_id, only_if_banned=True)
-        ctx.bot.delete_message(
-            chat_id=up.effective_chat.id,
-            message_id=priv_msg.message_id)
+
         try:
+            ctx.bot.delete_message(
+                chat_id=up.effective_chat.id,
+                message_id=priv_msg.message_id)
             ctx.bot.delete_message(
                 chat_id=chat_id,
                 message_id=pub_msg.message_id
@@ -204,7 +207,7 @@ class Challenger(Samaritable):
             reply_markup=kb_markup,
             disable_web_page_preview=True,
         )
-        self.db.set_captcha_status(user_id, True)
+        self.db.set_captcha_status(chat_id, user_id, True)
         self.current_captchas.pop(str(user_id), None)
 
     @log_curr_captchas
@@ -213,7 +216,7 @@ class Challenger(Samaritable):
                            up: Update,
                            ctx: CallbackContext,
                            chat_id: Union[str, int],
-                           private_chat_id: Union[str, int],
+                           priv_chat_id: Union[str, int],
                            user_id: Union[str, int],
                            priv_msg: Message,
                            pub_msg: Message) -> None:
