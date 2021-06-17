@@ -19,6 +19,7 @@ class Challenger(Samaritable):
     def __init__(self,
                  db: MongoConn,
                  current_captchas: dict):
+        super().__init__()
         self.db = db
         self.current_captchas = current_captchas
         super().__init__()
