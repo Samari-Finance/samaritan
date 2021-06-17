@@ -50,6 +50,7 @@ class Samaritan(Samaritable):
                  tg_api_path: str = None,
                  db_api_path: str = None,
                  log_level: logging = logging.INFO):
+        super().__init__()
         setup_log(log_level=log_level)
         self.updater = Updater(token=read_api(tg_api_path), use_context=True)
         self.dispatcher = self.updater.dispatcher
