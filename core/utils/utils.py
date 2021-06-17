@@ -12,7 +12,7 @@ from telegram.utils.helpers import DEFAULT_NONE
 from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER
 
 
-def send_message(update: Update, context: CallbackContext,
+def send_message(up: Update, ctx: CallbackContext,
                  text: str,
                  chat_id=None,
                  parse_mode=DEFAULT_NONE,
@@ -20,36 +20,43 @@ def send_message(update: Update, context: CallbackContext,
                  disable_web_page_preview=DEFAULT_NONE,
                  disable_notification=False,
                  reply_markup=None,
+                 replace=False,
                  ) -> Message:
     """A wrapper around update.send_message
 
     :param chat_id: Chat to send message in
-    :param update: Incoming telegram.Update
-    :param context: Associated telegram.bot.CallbackContext
+    :param up: Incoming telegram.Update
+    :param ctx: Associated telegram.bot.CallbackContext
     :param text: String to send, must be at least 1 character
     :param parse_mode: Parse mode to send text, valid entries are 'html' or 'Markdown_v2'
     :param reply: If the outgoing message should be a reply
     :param disable_web_page_preview: Whether to enable or disable web previews
     :param disable_notification: Whether to send the outgoing message as a silent notification
     :param reply_markup: Markups to send with the text (keyboard, buttons etc.)
+    :param replace: If the incoming update message should be deleted.
 
     :return: The outgoing telegram.Message instance.
     """
+    if replace:
+        reply = False
+        text = _append_tag(up, text)
+        ctx.bot.delete_message(fallback_chat_id(up), fallback_message_id(up))
+
     reply_to_msg_id = None
     if reply:
-        if update.message is not None:
-            reply_to_msg_id = update.message.message_id
+        if up.message is not None:
+            reply_to_msg_id = up.message.message_id
 
     if not chat_id:
-        chat_id = update.effective_chat.id
+        chat_id = up.effective_chat.id
 
-    return context.bot.send_message(chat_id=chat_id,
-                                    text=text,
-                                    parse_mode=parse_mode,
-                                    reply_to_message_id=reply_to_msg_id,
-                                    disable_web_page_preview=disable_web_page_preview,
-                                    disable_notification=disable_notification,
-                                    reply_markup=reply_markup)
+    return ctx.bot.send_message(chat_id=chat_id,
+                                text=text,
+                                parse_mode=parse_mode,
+                                reply_to_message_id=reply_to_msg_id,
+                                disable_web_page_preview=disable_web_page_preview,
+                                disable_notification=disable_notification,
+                                reply_markup=reply_markup)
 
 
 def send_image(up: Update, ctx: CallbackContext,
@@ -59,7 +66,8 @@ def send_image(up: Update, ctx: CallbackContext,
                parse_mode=DEFAULT_NONE,
                reply=True,
                disable_notification=False,
-               reply_markup=None) -> Message:
+               reply_markup=None,
+               replace=False) -> Message:
     """Wrapper around telegram.bot.send_photo for convenience
 
     :param up: Incoming telegram.Update
@@ -71,8 +79,14 @@ def send_image(up: Update, ctx: CallbackContext,
     :param reply: Whether if the outgoing message should be a reply
     :param disable_notification: Whether to send the outgoing message as a silent notification
     :param reply_markup: Markups to send with the text (keyboard, buttons etc.)
+    :param replace: If the incoming update message should be deleted.
     :return: The outgoing telegram.Message instance
     """
+    if replace:
+        reply = False
+        caption = _append_tag(up, caption)
+        ctx.bot.delete_message(fallback_chat_id(up), fallback_message_id(up))
+
     reply_to_msg_id = None
     if reply:
         if up.message is not None:
@@ -97,6 +111,37 @@ def send_image(up: Update, ctx: CallbackContext,
         reply_to_message_id=reply_to_msg_id,
         disable_notification=disable_notification,
         reply_markup=reply_markup)
+
+
+def fallback_user_id(up: Update):
+    if up.effective_user.id:
+        return int(up.effective_user.id)
+    elif up.chat_member.new_chat_member.user.id:
+        return int(up.chat_member.new_chat_member.user.id)
+    elif up.message.from_user.id:
+        return int(up.message.from_user.id)
+    elif up.effective_message.from_user.id:
+        return int(up.effective_message.from_user.id)
+
+
+def fallback_chat_id(up: Update):
+    if up.effective_chat.id:
+        return int(up.effective_chat.id)
+    elif up.chat_member.chat.id:
+        return int(up.chat_member.chat.id)
+    elif up.message.chat_id:
+        return int(up.message.chat_id)
+
+
+def fallback_message_id(up: Update):
+    if up.message:
+        return int(up.message.message_id)
+    elif up.effective_message:
+        return int(up.effective_message.message_id)
+
+
+def _append_tag(up: Update, msg):
+    return f"{up.effective_user.name} {msg}"
 
 
 def read_api(api_key_file):
@@ -139,13 +184,11 @@ def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
     :param ctx: CallbackContext for bot
     :return: Deeplink to private chat with bot for captcha request
     """
-    user_id = up.chat_member.new_chat_member.user.id if up.chat_member.new_chat_member.user.id else up.effective_user.id
     chat_id = up.effective_chat.id if up.effective_chat.id else up.message.chat_id
 
     deeplink = f'https://t.me/{ctx.bot.username}?start=' \
                f'{CAPTCHA_PREFIX + CALLBACK_DIVIDER}' \
-               f'{str(chat_id) + CALLBACK_DIVIDER}' \
-               f'{str(user_id)}'
+               f'{str(chat_id)}'
     print(f'deeplink: {deeplink}')
     return deeplink
 

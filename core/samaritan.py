@@ -1,5 +1,6 @@
 """
     Telegram bot for Samari.finance Telegram group using python-telegram-bot
+    @ https://github.com/Samari-Finance/samaritan
     @ https://github.com/python-telegram-bot/python-telegram-bot
 
 """
@@ -7,7 +8,7 @@
 import logging
 from datetime import datetime
 from functools import wraps
-from typing import Callable
+from typing import Callable, Union
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -37,7 +38,7 @@ from core.utils.utils import (
     regex_req,
     gen_captcha_request_deeplink,
     setup_log,
-    log_entexit)
+    log_entexit, fallback_user_id, fallback_chat_id, fallback_message_id)
 from core.utils.utils_bot import (
     format_price,
     format_mc,
@@ -57,6 +58,7 @@ class Samaritan(Samaritable):
         self.db = MongoConn(read_api(db_api_path))
         self.graphql = GraphQLClient()
         self.current_captchas = {}
+        self.welcome = (Union[int, str], datetime)
         self.challenger = Challenger(self.db, self.current_captchas)
         self.add_handles(self.dispatcher)
 
@@ -175,6 +177,10 @@ class Samaritan(Samaritable):
                                      permissions=ChatPermissions(can_send_messages=False))
 
     @log_entexit
+    def member_msg(self, up: Update, ctx: CallbackContext):
+        ctx.bot.delete_message(fallback_chat_id(up), fallback_message_id(up))
+
+    @log_entexit
     def left_member(self, up: Update, ctx: CallbackContext):
         self.db.remove_ref(chat_id=up.effective_chat.id, user_id=up.effective_user.id)
         self.db.set_captcha_status(chat_id=up.effective_chat.id, user_id=up.effective_user.id, status=False)
@@ -255,12 +261,12 @@ class Samaritan(Samaritable):
         reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
         self.log.debug('Requesting captcha:{ deeplink=%s', url)
         msg = send_message(
+            up=up,
+            ctx=ctx,
             text=self.captcha_text(up, ctx),
-            reply_markup=reply_markup,
-            update=up,
-            context=ctx)
+            reply_markup=reply_markup)
         if not self.current_captchas.get(up.effective_user.id, None):
-            self.current_captchas[url.split('_')[-1]] = {
+            self.current_captchas[fallback_user_id(up)] = {
                 "pub_msg": msg,
                 "attempts": 0}
 
@@ -269,6 +275,8 @@ class Samaritan(Samaritable):
 
     @log_entexit
     def add_handles(self, dp):
+        dp.add_handler(MessageHandler(Filters.status_update.new_chat_members |
+                                      Filters.status_update.left_chat_member, self.member_msg))
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
@@ -307,4 +315,5 @@ class Samaritan(Samaritable):
 
     @staticmethod
     def _format_reference(update: Update, prev_msg):
+        # todo use backend command instead
         return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
