@@ -9,40 +9,34 @@ class MongoConn:
                  path: str = None):
         self._init_conn(path)
 
-    def set_invite_link_by_id(self, link, user_id):
-        self.members.update_one({'_id': user_id},
-                                {'$set': {'invite_link': link}}, upsert=True)
+    def set_invite_link_by_id(self, chat_id, link, user_id):
+        self._chat_members(chat_id).update_one({'_id': user_id},
+                                               {'$set': {'invite_link': link}}, upsert=True)
 
-    def set_new_ref(self, link, new_ref_user_id):
+    def set_new_ref(self, chat_id, link, new_ref_user_id):
         new_ref_user_id = int(new_ref_user_id)
-        self.members.update_one({'invite_link': link}, {'$push': {'refs': new_ref_user_id},
-                                                        '$inc': {'refs_size': 1}}, upsert=True)
+        self._chat_members(chat_id).update_one({'invite_link': link}, {'$push': {'refs': new_ref_user_id},
+                                                                       '$inc': {'refs_size': 1}}, upsert=True)
 
-    def get_members_pts(self):
-        c = self.members.find({'refs_size': {'$gt': 0}})
+    def get_members_pts(self, chat_id):
+        c = self._chat_members(chat_id).find({'refs_size': {'$gt': 0}})
         lst = []
         for doc in c:
             print(doc)
             lst.append({'id': doc['_id'], 'pts': len(doc['refs'])})
         return lst
 
-    def get_invite_by_user_id(self, user_id):
-        c = self.members.find_one({'_id': user_id})
+    def get_invite_by_user_id(self, chat_id, user_id):
+        c = self._chat_members(chat_id).find_one({'_id': user_id})
         if c:
             c = c.get('invite_link', None)
         return c
 
-    def remove_ref(self, user_id):
+    def remove_ref(self, chat_id, user_id):
         user_id = int(user_id)
-        self.members.find_one_and_update({'refs': user_id, 'refs_size': {'$gt': 0}},
-                                         {'$pull': {'refs': user_id},
-                                          '$inc': {'refs_size': -1}})
-
-    def get_members(self):
-        return self.members
-
-    def get_handlers(self):
-        return self.handlers
+        self._chat_members(chat_id).find_one_and_update({'refs': user_id, 'refs_size': {'$gt': 0}},
+                                                        {'$pull': {'refs': user_id},
+                                                         '$inc': {'refs_size': -1}})
 
     def set_default_handlers(self):
         for key, value in commands.items():
@@ -85,31 +79,41 @@ class MongoConn:
     def _upsert_handler(self, command: str, key: str, value):
         self.handlers.update({'_id': command}, {'$set': {key: value}}, upsert=True)
 
-    def _init_cols(self):
-        self.members = self.db['members']
-        self.handlers = self.db['handlers']
-        self.default_handlers = self.db['default_handlers']
-        self.admins = self.db['admins']
-        self.set_default_handlers()
+    def _chat_members(self, chat_id):
+        return self.chats_db[str(chat_id)]
 
     def _init_conn(self, path):
         self.client = MongoClient(path)
-        self.db = self.client['main']
+        self.main_db = self.client['main']
+        self.chats_db = self.client['chats']
         self._init_cols()
 
-    def set_captcha_status(self, user_id, status: bool):
+    def _init_cols(self):
+        self.handlers = self.main_db['handlers']
+        self.default_handlers = self.main_db['default_handlers']
+        self.admins = self.main_db['admins']
+        self.set_default_handlers()
+
+    def set_captcha_status(self, chat_id, user_id, status: bool):
         if isinstance(user_id, str):
             user_id = int(user_id)
-        self.members.update_one({'_id': user_id},
-                                {'$set': {
-                                    'captcha_completed': status
-                                }}, upsert=True)
+        self._chat_members(chat_id).update_one({'_id': user_id},
+                                               {'$set': {
+                                                   'captcha_completed': status
+                                               }}, upsert=True)
 
-    def get_captcha_status(self, user_id) -> bool:
+    def get_captcha_status(self, chat_id, user_id) -> bool:
         user_id = int(user_id)
         try:
-            return self.members.find_one({'_id': user_id}).get('captcha_completed', False)
+            return self._chat_members(chat_id).find_one({'_id': user_id}).get('captcha_completed', False)
 
         except (KeyError, AttributeError, TypeError):
-            self.set_captcha_status(user_id=user_id, status=False)
+            self.set_captcha_status(user_id=user_id, chat_id=chat_id, status=False)
             return False
+
+    def set_private_chat_id(self, chat_id, user_id, priv_chat_id):
+        self._chat_members(chat_id).update_one({'_id': int(user_id)},
+                                               {'$set': {'chat_id': priv_chat_id}}, upsert=True)
+
+    def get_private_chat_id(self, chat_id, user_id):
+        return self._chat_members(chat_id).find_one({'_id': int(user_id)}).get('chat_id')
