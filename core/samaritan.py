@@ -59,7 +59,6 @@ class Samaritan(Samaritable):
         self.current_captchas = {}
         self.challenger = Challenger(self.db, self.current_captchas)
         self.add_handles(self.dispatcher)
-        super().__init__()
 
     def gen_handler_attr(self):
         for key in self.db.default_handlers.find():
