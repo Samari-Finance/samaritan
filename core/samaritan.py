@@ -186,25 +186,25 @@ class Samaritan(Samaritable):
         chat_id = up.effective_chat
         user_id = up.effective_user
         msg = f'🏆 INVITE CONTEST LEADERBOARD 🏆\n\n'
-        scoreboard = sorted(self.db.get_members_pts(), key=lambda i: i['pts'])
+        scoreboard = sorted(self.db.get_members_pts(chat_id=chat_id), key=lambda i: i['pts'])
 
         try:
-            if len(context.args) > 0:
-                limit = int(context.args[0])
+            if len(ctx.args) > 0:
+                limit = int(ctx.args[0])
                 if limit > 50:
                     limit = 50
             for member in scoreboard[:limit]:
-                msg += f'{str(counter)+".":<3} {chat.get_member(member["id"]).user.name:<20} with {member["pts"]} {"pts"}\n' \
+                msg += f'{str(counter)+".":<3} {chat_id.get_member(member["id"]).user.name:<20} with {member["pts"]} {"pts"}\n' \
 
                 counter += 1
 
-            caller = next((x for x in scoreboard if x['id'] == user.id), None)
+            caller = next((x for x in scoreboard if x['id'] == user_id.id), None)
             if caller:
                 msg += f'\nYour score: {scoreboard.index(caller)+1}. with {caller["pts"]:<3} {"pts"}'
-            send_message(update, context, msg, disable_notification=True, reply=False)
+            send_message(up, ctx, msg, disable_notification=True, reply=False)
 
         except ValueError:
-            send_message(update, context, f'Invalid argument: {context.args} for leaderboard command')
+            send_message(up, ctx, f'Invalid argument: {ctx.args} for leaderboard command')
 
     @log_entexit
     def price(self, up: Update, ctx: CallbackContext):
