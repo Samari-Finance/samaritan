@@ -2,7 +2,7 @@ import logging
 import os
 from functools import wraps
 from io import BytesIO
-from typing import List, Union
+from typing import List, Union, Optional
 
 from PIL.Image import Image
 from telegram import Update, InlineKeyboardButton, Message
@@ -14,7 +14,8 @@ from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER
 
 def send_message(up: Update, ctx: CallbackContext,
                  text: str,
-                 chat_id=None,
+                 chat_id=Optional[Union[str, int]],
+                 message_id=Optional[Union[str, int]],
                  parse_mode=DEFAULT_NONE,
                  reply=True,
                  disable_web_page_preview=DEFAULT_NONE,
@@ -24,9 +25,10 @@ def send_message(up: Update, ctx: CallbackContext,
                  ) -> Message:
     """A wrapper around update.send_message
 
-    :param chat_id: Chat to send message in
     :param up: Incoming telegram.Update
     :param ctx: Associated telegram.bot.CallbackContext
+    :param chat_id: Chat to send message in. Uses fallback in case not present.
+    :param message_id: Message id to provide. Uses fallback in case not present.
     :param text: String to send, must be at least 1 character
     :param parse_mode: Parse mode to send text, valid entries are 'html' or 'Markdown_v2'
     :param reply: If the outgoing message should be a reply
@@ -37,18 +39,20 @@ def send_message(up: Update, ctx: CallbackContext,
 
     :return: The outgoing telegram.Message instance.
     """
+    if not chat_id:
+        chat_id = fallback_chat_id(up)
+    if not message_id:
+       message_id = fallback_message_id(up)
+
     if replace:
         reply = False
         text = _append_tag(up, text)
-        ctx.bot.delete_message(fallback_chat_id(up), fallback_message_id(up))
+        ctx.bot.delete_message(chat_id, message_id)
 
     reply_to_msg_id = None
     if reply:
-        if up.message is not None:
-            reply_to_msg_id = up.message.message_id
-
-    if not chat_id:
-        chat_id = up.effective_chat.id
+        if message_id:
+            reply_to_msg_id = message_id
 
     return ctx.bot.send_message(chat_id=chat_id,
                                 text=text,
