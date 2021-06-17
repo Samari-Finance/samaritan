@@ -208,22 +208,14 @@ class Samaritan(Samaritable):
 
     @log_entexit
     def price(self, up: Update, ctx: CallbackContext):
-        response = self.graphql.q_price()
-        buy_amount = self._dex_trades(response)['buyAmount']
-        sell_amount_usd = self._dex_trades(response)['sellAmountInUsd']
-        price = sell_amount_usd / buy_amount
-        text = self.db.get_text_by_handler('price')+self._format_price(price)
+        price = self.graphql.fetch_price()
+        text = self.db.get_text_by_handler('price')+format_price(price)
         send_message(up, ctx, text, parse_mode=MARKDOWN_V2)
 
     @log_entexit
     def mc(self, up: Update, ctx: CallbackContext):
-        response = self.graphql.q_price()
-        buy_amount = self._dex_trades(response)['buyAmount']
-        sell_amount_usd = self._dex_trades(response)['sellAmountInUsd']
-        price = sell_amount_usd / buy_amount
-        mc = price * 1273628335437
-        print(f"mc: {mc}")
-        send_message(up, ctx, self.db.get_text_by_handler('mc')+self._format_mc(mc), parse_mode=MARKDOWN_V2)
+        mc = self.graphql.fetch_mc()
+        send_message(up, ctx, self.db.get_text_by_handler('mc')+format_mc(mc), parse_mode=MARKDOWN_V2)
 
     @log_entexit
     def evaluate_membership(self, new_member, old_member):
