@@ -2,6 +2,11 @@ import random
 
 from PIL import ImageDraw, ImageFont
 from PIL import Image
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CallbackContext
+
+from core import CAPTCHA_PREFIX, CAPTCHA_CALLBACK_PREFIX, CALLBACK_DIVIDER
+from core.utils.utils import log_curr_captchas, log_entexit, send_image, build_menu
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
 fill_color = [(64, 107, 76), (0, 87, 128), (0, 3, 82), (191, 0, 255), (72, 189, 0), (189, 107, 0), (189, 41, 0)]
@@ -59,7 +64,7 @@ class Challenge:
         self._ans = ans
         self._choices = choices
 
-    def gen_captcha_img(self) -> Image:
+    def gen_img(self) -> Image:
         """Generates captcha image with random lines and points using pillow.
 
         :return: captcha image
@@ -99,6 +104,36 @@ class Challenge:
                        fill=random.choice(colors))
 
         return img
+
+    def gen_img_markup(
+            self,
+            up: Update,
+            ctx: CallbackContext,
+            callback: str,
+    ):
+        """Returns a tuple of captcha image file_id uploaded to private channel
+         and KeyBoardMarkup based on a challenge
+
+        :param up: incoming update
+        :param ctx: context for bot
+        :param ch: Challenge to draw
+        :param callback: CallbackContext from bot
+        :return: Tuple of image and KeyboardMarkup
+        """
+        callback = callback.replace(CAPTCHA_PREFIX, CAPTCHA_CALLBACK_PREFIX)
+        img_file = self.gen_img()
+        img = send_image(up, ctx, chat_id=-1001330154006, img=img_file, reply=False).photo[0]
+        buttons = [InlineKeyboardButton(
+            text=str(c),
+            callback_data=callback + CALLBACK_DIVIDER + str(c)) for c in self.choices()]
+        reply_markup = InlineKeyboardMarkup(build_menu(
+            buttons=buttons,
+            n_cols=3,
+            header_buttons=[InlineKeyboardButton(
+                text='Refresh captcha',
+                callback_data=callback + CALLBACK_DIVIDER + str(-1))]
+        ))
+        return img, reply_markup
 
     def qus(self):
         return self.__str__()

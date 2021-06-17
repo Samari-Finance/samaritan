@@ -212,39 +212,8 @@ class Challenger(Samaritable):
         self.db.set_captcha_status(user_id, True)
         self.current_captchas.pop(str(user_id), None)
 
-    @wraps_log
-    def challenge_to_reply_markup(
-            self,
-            up: Update,
-            ctx: CallbackContext,
-            ch: Challenge,
-            callback: str,
-            ):
-        """Returns a tuple of captcha image file_id uploaded to private channel
-         and KeyBoardMarkup based on a challenge
-
-        :param up: incoming update
-        :param ctx: context for bot
-        :param ch: Challenge to draw
-        :param callback: CallbackContext from bot
-        :return: Tuple of image and KeyboardMarkup
-        """
-        callback = callback.replace(CAPTCHA_PREFIX, CAPTCHA_CALLBACK_PREFIX)
-        img_file = ch.gen_captcha_img()
-        img = send_image(up, ctx, chat_id=-1001330154006, img=img_file, reply=False).photo[0]
-        buttons = [InlineKeyboardButton(
-            text=str(c),
-            callback_data=callback + CALLBACK_DIVIDER + str(c)) for c in ch.choices()]
-        reply_markup = InlineKeyboardMarkup(build_menu(
-            buttons=buttons,
-            n_cols=3,
-            header_buttons=[InlineKeyboardButton(
-                text='Refresh captcha',
-                callback_data=callback + CALLBACK_DIVIDER + str(-1))]
-        ))
-        return img, reply_markup
-
-    @wraps_log
+    @log_curr_captchas
+    @log_entexit
     def kick_if_incomplete(self,
                            up: Update,
                            ctx: CallbackContext,
