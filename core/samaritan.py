@@ -35,7 +35,10 @@ from core.utils.utils import (
     send_message,
     regex_req,
     setup_log,
-    log_entexit, fallback_user_id, fallback_chat_id, fallback_message_id)
+    log_entexit,
+    fallback_user_id,
+    fallback_chat_id,
+    fallback_message_id)
 from core.utils.utils_bot import (
     format_price,
     format_mc,
@@ -150,10 +153,16 @@ class Samaritan(Samaritable):
                 getattr(self, self.get_handler_name(attributes, COMMAND))(up, ctx)
 
     def add_dp_handlers(self, dp):
+        """Adds all applicable handlers to the dispatcher. First calls to generate them, then adds them, using their
+        respective methods, based on what type they are.
+
+        :param dp: dispatcher to add the handlers to
+        :return: None
+        """
         self.gen_handler_attr()
         for key in self.db.default_handlers.find():
             handler_type = key['type']
-            if handler_type == UTIL or handler_type == CAPTCHA:
+            if handler_type not in [COMMAND, TIMED, REGEX]:
                 continue
             elif handler_type == COMMAND or handler_type == TIMED:
                 self.add_command_handler(dp, key)
