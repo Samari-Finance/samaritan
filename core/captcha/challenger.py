@@ -18,11 +18,10 @@ MAX_ATTEMPTS = 4
 class Challenger(Samaritable):
 
     def __init__(self,
-                 db: MongoConn,
-                 current_captchas: dict):
+                 db: MongoConn):
         super().__init__(db)
         self.db = db
-        self.current_captchas = current_captchas
+        self.current_captchas = {}
 
     @log_entexit
     def request_captcha(self, up: Update, ctx: CallbackContext):

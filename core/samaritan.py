@@ -54,9 +54,8 @@ class Samaritan(Samaritable):
         super().__init__(self.db)
         setup_log(log_level=log_level)
         self.graphql = GraphQLClient(self.db)
-        self.current_captchas = {}
         self.welcome = (Union[int, str], datetime)
-        self.challenger = Challenger(self.db, self.current_captchas)
+        self.challenger = Challenger(self.db)
         self.inviter = Inviter(self.db)
         self.contestor = Contestor(self.db)
         self.add_handlers(self.dispatcher)
