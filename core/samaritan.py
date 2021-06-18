@@ -28,7 +28,6 @@ from core.bitquery.graphcli import GraphQLClient
 from core.captcha.challenger import Challenger
 from core.contest.contestor import Contestor
 from core.contest.inviter import Inviter
-from core.default_commands import commands
 from core.db.mongo_db import MongoConn
 from core.samaritable import Samaritable
 from core.utils.utils import (
@@ -275,8 +274,6 @@ class Samaritan(Samaritable):
         dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
         self.add_dp_handlers(dp)
 
-
-
     @staticmethod
     def get_handler_name(attributes: dict, handler_type=None):
         handler_type = handler_type if handler_type else attributes['type']
@@ -295,7 +292,5 @@ class Samaritan(Samaritable):
             return method(self_inner, *args, **kwargs)
         return inner
 
-    @staticmethod
-    def _format_reference(update: Update, prev_msg):
-        # todo use backend command instead
-        return f"{commands['too_fast']['text']}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
+    def _format_reference(self, update: Update, prev_msg):
+        return f"{self.db.get_text_by_handler('too_fast')}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
