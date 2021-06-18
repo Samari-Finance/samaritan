@@ -63,14 +63,24 @@ class Samaritan(Samaritable):
         self.add_handles(self.dispatcher)
 
     def gen_handler_attr(self):
+        """Generates all handlers, based on their attributes in db.
+        :return:
+        """
         for key in self.db.default_handlers.find():
             if key.get('regex'):
+                #  If the handler has regexes, create these as well
                 _handle = self.gen_handler(key, REGEX)
                 setattr(self, self.get_handler_name(key, REGEX), _handle)
             _handle = self.gen_handler(key)
             setattr(self, self.get_handler_name(key), _handle)
 
     def gen_handler(self, handler_attr: dict, handler_type=None) -> Callable:
+        """Generates a handler, based on the given attributes.
+
+        :param handler_attr: attributes of the handler to generate
+        :param handler_type: if specified, will generate this type, if not uses type specified in the attributes
+        :return: the generated handler method
+        """
         handler_type = handler_type if handler_type else handler_attr['type']
 
         def handler(update, context):
@@ -86,14 +96,31 @@ class Samaritan(Samaritable):
         return handler
 
     def gen_command_handler(self, up, ctx, attributes: dict):
+        """Generates a simple send message method for a CommandHandler.
+
+        :param up: incoming telegram.Update
+        :param ctx: context for bot
+        :param attributes: handler attributes
+        :return: the outgoing telegram.Message object
+        """
         return send_message(up, ctx,
                             text=attributes['text'],
                             reply=attributes.get('reply', False),
+                            replace=attributes.get('replace', False),
                             parse_mode=attributes.get('parse_mode', DEFAULT_NONE),
                             disable_notification=attributes.get('disable_notification', False),
                             disable_web_page_preview=attributes.get('disable_web_preview', DEFAULT_NONE))
 
     def gen_timed_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
+        """Generates a timed handler, which will send the message, if the timeout window has not been passed,
+        otherwise sends a reference to the previous message. Useful if some commands' text take up too much space in the
+        chat.
+
+        :param up: incoming telegram.Update
+        :param ctx: context for bot
+        :param attributes: handler attributes
+        :return: None
+        """
         now = datetime.now()
         timer_str = f"_{attributes['_id']}_timer"
         msg_str = f"_{attributes['_id']}_msg"
@@ -110,6 +137,13 @@ class Samaritan(Samaritable):
                          parse_mode=MARKDOWN_V2)
 
     def gen_regex_handler(self, up: Update, ctx: CallbackContext, attributes: dict):
+        """Generates a regex handler.
+
+        :param up: incoming telegram.Update
+        :param ctx: context for bot
+        :param attributes: handler attributes
+        :return: None
+        """
         if regex_req(up.message):
             if attributes['type'] == REGEX:
                 getattr(self, self.get_handler_name(attributes))(up, ctx)
