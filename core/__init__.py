@@ -1,5 +1,5 @@
 from datetime import timedelta
-from telegram import ChatMember, ChatPermissions
+from telegram import ChatMember, ChatPermissions, Chat
 
 """Message formats
 """
@@ -15,6 +15,13 @@ ADMIN = ChatMember.ADMINISTRATOR
 RESTRICTED = ChatMember.RESTRICTED
 CREATOR = ChatMember.CREATOR
 
+"""Constants for chat update types
+"""
+PRIVATE = Chat.PRIVATE
+SUPERGROUP = Chat.SUPERGROUP
+GROUP = Chat.GROUP
+CHANNEL = Chat.CHANNEL
+
 """Handler type names
 """
 REGEX = 'regex'
@@ -27,11 +34,12 @@ CAPTCHA = 'captcha'
 """
 DEFAULT_DELAY = timedelta(seconds=30)
 
-"""Just captcha
+"""Deeplink/callback constants
 """
+CALLBACK_DIVIDER = '_'
 CAPTCHA_CALLBACK_PREFIX = 'completed'
 CAPTCHA_PREFIX = 'captcha'
-CALLBACK_DIVIDER = '_'
+INVITE_PREFIX = 'invite'
 
 """Standard member permissions
 """
