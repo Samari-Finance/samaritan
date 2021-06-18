@@ -8,7 +8,8 @@ from telegram.ext import CallbackContext
 from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
-from core.utils.utils import send_image, send_message, log_curr_captchas, log_entexit, fallback_user_id
+from core.utils.utils import send_image, send_message, log_curr_captchas, log_entexit, fallback_user_id, \
+    gen_captcha_request_deeplink, build_menu
 from core.samaritable import Samaritable
 
 MAX_ATTEMPTS = 4
@@ -22,6 +23,22 @@ class Challenger(Samaritable):
         super().__init__()
         self.db = db
         self.current_captchas = current_captchas
+
+    @log_entexit
+    def request_captcha(self, up: Update, ctx: CallbackContext):
+        url = gen_captcha_request_deeplink(up, ctx)
+        button_list = [InlineKeyboardButton(text="👋 Click here for captcha 👋", url=url)]
+        reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
+        self.log.debug('Requesting captcha:{ deeplink=%s', url)
+        msg = send_message(
+            up=up,
+            ctx=ctx,
+            text=self.captcha_text(up),
+            reply_markup=reply_markup)
+        if not self.current_captchas.get(up.effective_user.id, None):
+            self.current_captchas[fallback_user_id(up)] = {
+                "pub_msg": msg,
+                "attempts": 0}
 
     @log_curr_captchas
     @log_entexit
@@ -38,13 +55,15 @@ class Challenger(Samaritable):
         chat_id = payload[1]
         user_id = fallback_user_id(up)
         payload_aggr = ctx.args[0] + CALLBACK_DIVIDER + str(user_id)
-        pub_msg = self.get_captcha_by_user(user_id)['pub_msg']
+        pub_msg = self._get_captcha_by_user(user_id)['pub_msg']
         self.log.debug('Captcha deeplink:{ chat_id: %s, user_id: %s, pub_msg_id: %s }',
                        str(chat_id),
                        str(user_id),
                        str(pub_msg.message_id))
+        if self.db.get_captcha_status(chat_id, user_id):
+            send_message(up, ctx, text='You have already completed your captcha! ', reply=False)
 
-        if not self.get_captcha_by_user(user_id).get('priv_msg'):
+        elif not self._get_captcha_by_user(user_id).get('priv_msg'):
             ch = Challenge()
             img, reply_markup = ch.gen_img_markup(up, ctx, payload_aggr)
             msg = send_image(
@@ -55,7 +74,7 @@ class Challenger(Samaritable):
                 parse_mode=MARKDOWN_V2,
                 reply_markup=reply_markup,
                 reply=False)
-            self.get_captcha_by_user(user_id).update(
+            self._get_captcha_by_user(user_id).update(
                 priv_msg=msg,
                 ch=ch,
                 attempts=0)
@@ -68,7 +87,7 @@ class Challenger(Samaritable):
                                     pub_msg=pub_msg,
                                     priv_msg=msg)
         else:
-            ch = self.get_captcha_by_user(user_id)['ch']
+            ch = self._get_captcha_by_user(user_id)['ch']
 
     @log_curr_captchas
     @log_entexit
@@ -86,7 +105,7 @@ class Challenger(Samaritable):
         self.log.debug('Captcha callback:{user_id: %s, answer: %s}', str(user_id), str(ans))
         if int(ans) == -1:
             self.captcha_refresh(up, ctx, payload)
-        elif int(ans) == self.get_captcha_by_user(user_id)['ch'].ans():
+        elif int(ans) == self._get_captcha_by_user(user_id)['ch'].ans():
             self.captcha_completed(up, ctx, payload)
         else:
             self.captcha_failed(up, ctx, payload)
@@ -119,8 +138,8 @@ class Challenger(Samaritable):
                 parse_mode=MARKDOWN_V2),
             reply_markup=reply_markup,
         )
-        self.get_captcha_by_user(user_id)['msg'] = msg
-        self.get_captcha_by_user(user_id)['ch'] = new_ch
+        self._get_captcha_by_user(user_id)['msg'] = msg
+        self._get_captcha_by_user(user_id)['ch'] = new_ch
 
     @log_curr_captchas
     @log_entexit
@@ -145,13 +164,13 @@ class Challenger(Samaritable):
                        str(pub_msg.message_id),
                        str(priv_msg.message_id))
 
-        self.get_captcha_by_user(user_id)['attempts'] += 1
+        self._get_captcha_by_user(user_id)['attempts'] += 1
         img, reply_markup = new_ch.gen_img_markup(
             up, ctx, self.gen_captcha_callback(chat_id, user_id))
 
         up.callback_query.answer(self.db.get_text_by_handler('captcha_failed'))
         try:
-            if MAX_ATTEMPTS - self.get_captcha_by_user(user_id)['attempts'] > 0:
+            if MAX_ATTEMPTS - self._get_captcha_by_user(user_id)['attempts'] > 0:
                 msg = ctx.bot.edit_message_media(
                     chat_id=priv_msg.chat_id,
                     message_id=priv_msg.message_id,
@@ -161,8 +180,8 @@ class Challenger(Samaritable):
                         parse_mode=MARKDOWN_V2),
                     reply_markup=reply_markup,
                 )
-                self.get_captcha_by_user(user_id)['priv_msg'] = msg
-                self.get_captcha_by_user(user_id)['ch'] = new_ch
+                self._get_captcha_by_user(user_id)['priv_msg'] = msg
+                self._get_captcha_by_user(user_id)['ch'] = new_ch
             else:
                 self.log.debug('Attempts drained')
                 self.kick_and_restrict(up, ctx, chat_id, user_id, pub_msg, priv_msg, priv_chat_id)(ctx)
@@ -293,3 +312,8 @@ class Challenger(Samaritable):
     @log_entexit
     def _pop_user(self, user_id):
         self.current_captchas.pop(int(user_id))
+
+    @staticmethod
+    def captcha_text(up: Update):
+        return f"Welcome {up.chat_member.new_chat_member.user.name}, to Samari Finance ❤️\n" \
+               f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
