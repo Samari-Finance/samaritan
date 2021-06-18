@@ -55,7 +55,7 @@ class Challenger(Samaritable):
         chat_id = payload[1]
         user_id = fallback_user_id(up)
         payload_aggr = ctx.args[0] + CALLBACK_DIVIDER + str(user_id)
-        pub_msg = self._get_captcha_by_user(user_id)['pub_msg']
+        pub_msg = self._get_captcha_by_user(user_id).get('pub_msg')
         self.log.debug('Captcha deeplink:{ chat_id: %s, user_id: %s, pub_msg_id: %s }',
                        str(chat_id),
                        str(user_id),
