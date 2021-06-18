@@ -1,4 +1,8 @@
 # syntax=docker/dockerfile:1
+FROM ubuntu:latest
+RUN apt-get -y update
+RUN apt-get -y install git
+
 FROM python:3.8-slim-buster
 WORKDIR /bot
 COPY requirements.txt requirements.txt
