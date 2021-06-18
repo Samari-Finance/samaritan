@@ -38,7 +38,7 @@ from core.utils.utils import (
     regex_req,
     gen_captcha_request_deeplink,
     setup_log,
-    log_entexit, fallback_user_id, fallback_chat_id, fallback_message_id)
+    log_entexit, fallback_user_id, fallback_chat_id, fallback_message_id, gen_invite_request_deeplink)
 from core.utils.utils_bot import (
     format_price,
     format_mc,
@@ -137,16 +137,53 @@ class Samaritan(Samaritable):
         dp.add_handler(MessageHandler(gen_filter(aliases), getattr(self, self.get_handler_name(key, REGEX))))
 
     @log_entexit
-    def contest(self, up: Update, ctx: CallbackContext):
-        user = up.effective_user
-        chat_id = up.effective_chat.id
-        link = self.db.get_invite_by_user_id(chat_id, user.id)
+    def invite(self, up: Update, ctx: CallbackContext):
+        user_id = fallback_user_id(up)
+        chat_id = fallback_chat_id(up)
+        priv_chat_id = self.db.get_private_chat_id(chat_id, user_id)
+
+        if up.message.chat.type == PRIVATE:
+            send_message(up, ctx,
+                         text='Cannot generate invite link for private conversation 😔\n'
+                              'Use this command in a group we are both part of!',
+                         reply=False)
+        elif not priv_chat_id:
+            url = gen_invite_request_deeplink(up, ctx)
+            button_list = [InlineKeyboardButton(text="Click here to start private conversation", url=url)]
+            reply_markup = InlineKeyboardMarkup(build_menu(button_list, n_cols=1))
+            self.log.debug('Requesting invite: {deeplink=%s', url)
+            send_message(
+                up=up,
+                ctx=ctx,
+                text=self.db.get_text_by_handler('invite'),
+                replace=True,
+                reply_markup=reply_markup)
+        else:
+            self.send_invite_link(up, ctx, chat_id, priv_chat_id, user_id)
+            send_message(up, ctx,
+                         text='check your dms 😉',
+                         replace=True)
+
+    @log_entexit
+    def invite_deeplink(self, up: Update, ctx: CallbackContext):
+        payload = ctx.args[0].split(CALLBACK_DIVIDER)
+        pub_chat_id = payload[1]
+        priv_chat_id = fallback_chat_id(up)
+        user_id = fallback_user_id(up)
+        self.send_invite_link(up, ctx, pub_chat_id, priv_chat_id, user_id)
+        self.db.set_private_chat_id(pub_chat_id, user_id, priv_chat_id)
+
+    @log_entexit
+    def send_invite_link(self, up: Update, ctx: CallbackContext, public_chat_id, private_chat_id, user_id):
+        link = self.db.get_invite_by_user_id(public_chat_id, user_id)
         if not link:
-            link = ctx.bot.create_chat_invite_link(chat_id).invite_link
-            self.db.set_invite_link_by_id(chat_id=chat_id, link=link, user_id=user.id)
+            link = ctx.bot.create_chat_invite_link(public_chat_id).invite_link
+            self.db.set_invite_link_by_id(chat_id=public_chat_id, link=link, user_id=user_id)
         send_message(up, ctx,
-                     reply=True,
-                     text=f'Here is your personal invite link: {link}')
+                     chat_id=private_chat_id,
+                     reply=False,
+                     text=f'Here is your personal invite link: {link}\n'
+                          f'Share this to earn points in the community challenge! 💪')
 
     @log_entexit
     def member_updated(self, up: Update, ctx: CallbackContext):
@@ -182,15 +219,17 @@ class Samaritan(Samaritable):
 
     @log_entexit
     def left_member(self, up: Update, ctx: CallbackContext):
-        self.db.remove_ref(chat_id=up.effective_chat.id, user_id=up.effective_user.id)
-        self.db.set_captcha_status(chat_id=up.effective_chat.id, user_id=up.effective_user.id, status=False)
+        chat_id = fallback_chat_id(up)
+        user_id = fallback_user_id(up)
+        self.db.remove_ref(chat_id=chat_id, user_id=user_id)
+        self.db.set_captcha_status(chat_id=chat_id, user_id=user_id, status=False)
 
     @log_entexit
     def leaderboard(self, up: Update, ctx: CallbackContext):
         limit = 10
         counter = 1
-        chat_id = up.effective_chat
-        user_id = up.effective_user
+        chat_id = fallback_chat_id(up)
+        user_id = fallback_user_id(up)
         msg = f'🏆 INVITE CONTEST LEADERBOARD 🏆\n\n'
         scoreboard = sorted(self.db.get_members_pts(chat_id=chat_id), key=lambda i: i['pts'])
 
@@ -263,7 +302,7 @@ class Samaritan(Samaritable):
         msg = send_message(
             up=up,
             ctx=ctx,
-            text=self.captcha_text(up, ctx),
+            text=self.captcha_text(up),
             reply_markup=reply_markup)
         if not self.current_captchas.get(up.effective_user.id, None):
             self.current_captchas[fallback_user_id(up)] = {
@@ -280,18 +319,22 @@ class Samaritan(Samaritable):
         dp.add_handler(ChatMemberHandler(
             chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
         dp.add_handler(CommandHandler('leaderboard', self.leaderboard))
-        dp.add_handler(CommandHandler(['invite', 'contest'], self.contest))
+        dp.add_handler(CommandHandler(['invite', 'contest'], self.invite))
         dp.add_handler(CommandHandler('price', self.price))
         dp.add_handler(CommandHandler('mc', self.mc))
         dp.add_handler(CommandHandler('start',
                                       self.challenger.captcha_deeplink,
                                       Filters.regex(r'captcha_([_a-zA-Z0-9-]*)'),
                                       pass_args=True))
+        dp.add_handler(CommandHandler('start',
+                                      self.invite_deeplink,
+                                      Filters.regex(r'invite_([_a-zA-Z0-9-]*)'),
+                                      pass_args=True))
         dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
         self.add_dp_handlers(dp)
 
     @staticmethod
-    def captcha_text(up: Update, ctx: CallbackContext):
+    def captcha_text(up: Update):
         return f"Welcome {up.chat_member.new_chat_member.user.name}, to Samari Finance ❤️\n" \
                f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
 

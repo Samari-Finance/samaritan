@@ -113,7 +113,12 @@ class MongoConn:
 
     def set_private_chat_id(self, chat_id, user_id, priv_chat_id):
         self._chat_members(chat_id).update_one({'_id': int(user_id)},
-                                               {'$set': {'chat_id': priv_chat_id}}, upsert=True)
+                                               {'$set': {'chat_id': int(priv_chat_id)}}, upsert=True)
 
     def get_private_chat_id(self, chat_id, user_id):
-        return self._chat_members(chat_id).find_one({'_id': int(user_id)}).get('chat_id')
+        try:
+            return self._chat_members(chat_id).find_one({
+                '_id': int(user_id),
+                'chat_id': {'$exists': True}}).get('chat_id')
+        except (KeyError, AttributeError, TypeError):
+            return None

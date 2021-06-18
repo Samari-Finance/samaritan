@@ -154,6 +154,8 @@ commands = {
            'disable_web_page_preview': True},
     "version": {'text': 'V2',
                 'regex': ['version', 'v1', 'v2']},
+    "invite": {'text': f"\nPress below to recieve your personal invite link 👇",
+               'type': 'util'},
     "captcha_challenge": {'text': '👇 Enter the correct answer below 👇',
                           'type': 'captcha'},
     "captcha_failed": {'text': 'Incorrect answer. Try again! ',

@@ -2,20 +2,22 @@ import logging
 import os
 from functools import wraps
 from io import BytesIO
-from typing import List, Union, Optional
+from typing import List, Union
 
 from PIL.Image import Image
 from telegram import Update, InlineKeyboardButton, Message
 from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
 
-from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER
+from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER, INVITE_PREFIX
+
+log = logging.getLogger('utils')
 
 
 def send_message(up: Update, ctx: CallbackContext,
                  text: str,
-                 chat_id=Optional[Union[str, int]],
-                 message_id=Optional[Union[str, int]],
+                 chat_id: Union[str, int] = None,
+                 message_id: Union[str, int] = None,
                  parse_mode=DEFAULT_NONE,
                  reply=True,
                  disable_web_page_preview=DEFAULT_NONE,
@@ -182,6 +184,21 @@ def build_menu(
     return menu
 
 
+def gen_invite_request_deeplink(up: Update, ctx: CallbackContext):
+    """Generates a new captcha request deeplink based on incoming Update and bot.CallbackContext
+        :param up: Incoming telegram.Update
+        :param ctx: CallbackContext for bot
+        :return: Deeplink to private chat with bot for captcha request
+        """
+    chat_id = fallback_chat_id(up)
+
+    deeplink = f'https://t.me/{ctx.bot.username}?start=' \
+               f'{INVITE_PREFIX + CALLBACK_DIVIDER}' \
+               f'{str(chat_id)}'
+    log.debug('Invite deeplink: %s', deeplink)
+    return deeplink
+
+
 def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
     """Generates a new captcha request deeplink based on incoming Update and bot.CallbackContext
     :param up: Incoming telegram.Update
@@ -193,7 +210,7 @@ def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
     deeplink = f'https://t.me/{ctx.bot.username}?start=' \
                f'{CAPTCHA_PREFIX + CALLBACK_DIVIDER}' \
                f'{str(chat_id)}'
-    print(f'deeplink: {deeplink}')
+    log.debug('Captcha deeplink: %s', deeplink)
     return deeplink
 
 
