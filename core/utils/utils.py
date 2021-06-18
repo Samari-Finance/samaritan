@@ -6,6 +6,7 @@ from typing import List, Union
 
 from PIL.Image import Image
 from telegram import Update, InlineKeyboardButton, Message
+from telegram.error import BadRequest
 from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
 
@@ -56,13 +57,24 @@ def send_message(up: Update, ctx: CallbackContext,
         if message_id:
             reply_to_msg_id = message_id
 
-    return ctx.bot.send_message(chat_id=chat_id,
-                                text=text,
-                                parse_mode=parse_mode,
-                                reply_to_message_id=reply_to_msg_id,
-                                disable_web_page_preview=disable_web_page_preview,
-                                disable_notification=disable_notification,
-                                reply_markup=reply_markup)
+    try:
+        return ctx.bot.send_message(chat_id=chat_id,
+                                    text=text,
+                                    parse_mode=parse_mode,
+                                    reply_to_message_id=reply_to_msg_id,
+                                    disable_web_page_preview=disable_web_page_preview,
+                                    disable_notification=disable_notification,
+                                    reply_markup=reply_markup)
+    except BadRequest as e:
+        if e.message == 'Replied message not found':
+            return ctx.bot.send_message(chat_id=chat_id,
+                                        text=text,
+                                        parse_mode=parse_mode,
+                                        disable_web_page_preview=disable_web_page_preview,
+                                        disable_notification=disable_notification,
+                                        reply_markup=reply_markup)
+        else:
+            raise e
 
 
 def send_image(up: Update, ctx: CallbackContext,
