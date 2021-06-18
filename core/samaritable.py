@@ -2,8 +2,11 @@ import logging
 from abc import ABC, abstractmethod
 from functools import wraps
 
-from core import CREATOR
+from telegram import ChatMember
+
+from core import CREATOR, ADMIN
 from core.db import MongoConn
+from core.utils.utils_mod import is_superadmin
 
 
 class Samaritable(ABC):
@@ -26,23 +29,26 @@ class Samaritable(ABC):
         @wraps(method)
         def inner(self_inner, *args, **kwargs):
             user_id = args[0].effective_user.id  # args[0]: update
-            if user_id not in self.db.get_admins:
-                print(f'Unauthorized access denied on {method.__name__}'
-                      f'for {user_id} : {args[0].message.chat.username}.')
+            chat_id = args[0].effective_chat.id
+            is_admin = args[1].bot.get_chat_member(chat_id, user_id).status == ADMIN
+            if not is_admin:
+                self.log.debug(f'Unauthorized access denied on %s for %s : %s.',
+                               method.__name__, user_id, args[0].message.chat.username)
                 args[0].message.reply_text('You do not have the required permissions to access this command')
                 return None  # quit handling command
             return method(self_inner, *args, **kwargs)
         return inner
 
-    def only_creator(self, method):
+    def only_superadmin(self, method):
         @wraps(method)
         def inner(self_inner, *args, **kwargs):
-            user_id = args[0].effective_user.id
-            is_creator = args[0].chat_member.new_chat_member.status == CREATOR  # args[0]: update
-
-            if is_creator:
-                print(f'Unauthorized access denied on {method.__name__}'
-                      f'for {user_id} : {args[0].message.chat.username}.')
+            # args[0]: update
+            user_id = args[0].effective_user.id  # args[0]: update
+            chat_id = args[0].effective_chat.id
+            user = args[1].bot.get_chat_member(chat_id, user_id)
+            if not is_superadmin(user):
+                self.log.debug(f'Unauthorized access denied on %s for %s : %s.',
+                               method.__name__, user_id, args[0].message.chat.username)
                 args[0].message.reply_text('You do not have the required permissions to access this command')
                 return None  # quit handling command
             return method(self_inner, *args, **kwargs)
