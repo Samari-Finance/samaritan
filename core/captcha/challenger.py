@@ -3,7 +3,7 @@ from typing import Union
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, InputMediaPhoto, Message
 from telegram.error import BadRequest
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, CommandHandler, CallbackQueryHandler, Filters
 
 from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
@@ -20,7 +20,7 @@ class Challenger(Samaritable):
     def __init__(self,
                  db: MongoConn,
                  current_captchas: dict):
-        super().__init__()
+        super().__init__(db)
         self.db = db
         self.current_captchas = current_captchas
 
@@ -293,9 +293,17 @@ class Challenger(Samaritable):
 
     @log_entexit
     def gen_captcha_callback(self, chat_id, user_id):
-        return CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER +\
+        return CAPTCHA_CALLBACK_PREFIX + CALLBACK_DIVIDER + \
                chat_id + CALLBACK_DIVIDER + \
                user_id
+
+    def add_handlers(self, dp):
+        dp.add_handler(CommandHandler('start',
+                                      self.captcha_deeplink,
+                                      Filters.regex(r'captcha_([_a-zA-Z0-9-]*)'),
+                                      pass_args=True))
+
+        dp.add_handler(CallbackQueryHandler(self.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
 
     @log_entexit
     def _get_priv_msg(self, user_id: Union[str, int]) -> Message:
@@ -317,3 +325,4 @@ class Challenger(Samaritable):
     def captcha_text(up: Update):
         return f"Welcome {up.chat_member.new_chat_member.user.name}, to Samari Finance ❤️\n" \
                f"To participate in the chat, a captcha is required.\nPress below to continue 👇"
+

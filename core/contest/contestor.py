@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, CommandHandler
 
 from core.db import MongoConn
 from core.samaritable import Samaritable
@@ -10,7 +10,7 @@ class Contestor(Samaritable):
 
     def __init__(self,
                  db: MongoConn):
-        super().__init__()
+        super().__init__(db)
         self.db = db
 
     @log_entexit
@@ -39,3 +39,6 @@ class Contestor(Samaritable):
 
         except ValueError:
             send_message(up, ctx, f'Invalid argument: {ctx.args} for leaderboard command')
+
+    def add_handlers(self, dp):
+        dp.add_handler(CommandHandler('leaderboard', self.leaderboard))

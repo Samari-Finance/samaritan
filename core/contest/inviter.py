@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, CommandHandler, Filters
 
 from core import PRIVATE, CALLBACK_DIVIDER
 from core.db import MongoConn
@@ -12,7 +12,7 @@ class Inviter(Samaritable):
 
     def __init__(self,
                  db: MongoConn):
-        super().__init__()
+        super().__init__(db)
         self.db = db
 
     @log_entexit
@@ -63,3 +63,10 @@ class Inviter(Samaritable):
                      reply=False,
                      text=f'Here is your personal invite link: {link}\n'
                           f'Share this to earn points in the community challenge! 💪')
+
+    def add_handlers(self, dp):
+        dp.add_handler(CommandHandler(['invite', 'contest'], self.invite))
+        dp.add_handler(CommandHandler('start',
+                                      self.invite_deeplink,
+                                      Filters.regex(r'invite_([_a-zA-Z0-9-]*)'),
+                                      pass_args=True))

@@ -1,16 +1,53 @@
-from pprint import pprint
 from statistics import mean
 
+from telegram import Update
+from telegram.ext import CallbackContext, CommandHandler
+
+from core import MARKDOWN_V2
 from core.bitquery import run_query
+from core.db import MongoConn
 from core.samaritable import Samaritable
-from core.utils.utils import log_entexit
+from core.utils.utils import log_entexit, send_message
+from core.utils.utils_bot import format_price, format_mc
 
 
 class GraphQLClient(Samaritable):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self,
+                 db: MongoConn):
+        super().__init__(db)
         self.sama_addr = '0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be'
+
+    @log_entexit
+    def price(self, up: Update, ctx: CallbackContext):
+        price = self.fetch_price()
+        text = self.db.get_text_by_handler('price') + format_price(price)
+        send_message(up, ctx, text, parse_mode=MARKDOWN_V2)
+
+    @log_entexit
+    def mc(self, up: Update, ctx: CallbackContext):
+        mc = self.fetch_mc()
+        send_message(up, ctx, self.db.get_text_by_handler('mc') + format_mc(mc), parse_mode=MARKDOWN_V2)
+
+    @log_entexit
+    def fetch_price(self):
+        prices = []
+        response = self.q_price()
+        for trade in self._dex_trades(response):
+            if self.is_buy(trade):
+                buy_amount = trade['buyAmount']
+                sell_amount_usd = trade['sellAmountInUsd']
+                prices.append(sell_amount_usd / buy_amount)
+            else:
+                buy_amount_usd = trade['buyAmountInUsd']
+                sell_amount = trade['sellAmount']
+                prices.append(buy_amount_usd / sell_amount)
+
+        return mean(prices)
+
+    @log_entexit
+    def fetch_mc(self):
+        return self.fetch_price() * 1273628335437
 
     @log_entexit
     def q_price(self) -> dict:
@@ -66,25 +103,9 @@ class GraphQLClient(Samaritable):
         """ % self.sama_addr
         return run_query(query)
 
-    @log_entexit
-    def fetch_price(self):
-        prices = []
-        response = self.q_price()
-        for trade in self._dex_trades(response):
-            if self.is_buy(trade):
-                buy_amount = trade['buyAmount']
-                sell_amount_usd = trade['sellAmountInUsd']
-                prices.append(sell_amount_usd / buy_amount)
-            else:
-                buy_amount_usd = trade['buyAmountInUsd']
-                sell_amount = trade['sellAmount']
-                prices.append(buy_amount_usd / sell_amount)
-
-        return mean(prices)
-
-    @log_entexit
-    def fetch_mc(self):
-        return self.fetch_price() * 1273628335437
+    def add_handlers(self, dp):
+        dp.add_handler(CommandHandler('price', self.price))
+        dp.add_handler(CommandHandler('mc', self.mc))
 
     @log_entexit
     def is_buy(self, trade):
@@ -93,5 +114,3 @@ class GraphQLClient(Samaritable):
     @log_entexit
     def _dex_trades(self, path: dict):
         return path['data']['ethereum']['dexTrades']
-
-

@@ -80,12 +80,14 @@ class MongoConn:
         self.handlers.update({'_id': command}, {'$set': {key: value}}, upsert=True)
 
     def _chat_members(self, chat_id):
-        return self.chats_db[str(chat_id)]
+        return self.chat_members_coll[str(chat_id)]
 
     def _init_conn(self, path):
         self.client = MongoClient(path)
         self.main_db = self.client['main']
-        self.chats_db = self.client['chats']
+        self.chat_members_coll = self.client['chats_members']
+        self.chat_settings_coll = self.client['chats_settings']
+        self.chat_chats_admins = self.client['chats_admins']
         self._init_cols()
 
     def _init_cols(self):

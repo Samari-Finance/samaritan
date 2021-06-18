@@ -7,7 +7,6 @@
 
 import logging
 from datetime import datetime
-from functools import wraps
 from typing import Callable, Union
 from telegram import (
     Update,
@@ -18,7 +17,7 @@ from telegram.ext import (
     CallbackContext,
     ChatMemberHandler,
     MessageHandler,
-    Filters, CallbackQueryHandler
+    Filters,
 )
 from telegram.utils.helpers import (
     DEFAULT_NONE)
@@ -40,8 +39,6 @@ from core.utils.utils import (
     fallback_chat_id,
     fallback_message_id)
 from core.utils.utils_bot import (
-    format_price,
-    format_mc,
     gen_filter)
 
 
@@ -51,18 +48,18 @@ class Samaritan(Samaritable):
                  tg_api_path: str = None,
                  db_api_path: str = None,
                  log_level: logging = logging.INFO):
-        super().__init__()
-        setup_log(log_level=log_level)
+        self.db = MongoConn(read_api(db_api_path))
         self.updater = Updater(token=read_api(tg_api_path), use_context=True)
         self.dispatcher = self.updater.dispatcher
-        self.db = MongoConn(read_api(db_api_path))
-        self.graphql = GraphQLClient()
+        super().__init__(self.db)
+        setup_log(log_level=log_level)
+        self.graphql = GraphQLClient(self.db)
         self.current_captchas = {}
         self.welcome = (Union[int, str], datetime)
         self.challenger = Challenger(self.db, self.current_captchas)
         self.inviter = Inviter(self.db)
         self.contestor = Contestor(self.db)
-        self.add_handles(self.dispatcher)
+        self.add_handlers(self.dispatcher)
 
     def gen_handler_attr(self):
         """Generates all handlers, based on their attributes in db.
@@ -218,17 +215,6 @@ class Samaritan(Samaritable):
         self.db.set_captcha_status(chat_id=chat_id, user_id=user_id, status=False)
 
     @log_entexit
-    def price(self, up: Update, ctx: CallbackContext):
-        price = self.graphql.fetch_price()
-        text = self.db.get_text_by_handler('price')+format_price(price)
-        send_message(up, ctx, text, parse_mode=MARKDOWN_V2)
-
-    @log_entexit
-    def mc(self, up: Update, ctx: CallbackContext):
-        mc = self.graphql.fetch_mc()
-        send_message(up, ctx, self.db.get_text_by_handler('mc')+format_mc(mc), parse_mode=MARKDOWN_V2)
-
-    @log_entexit
     def evaluate_membership(self, new_member, old_member):
         old_status = old_member.status
         new_status = new_member.status
@@ -262,44 +248,23 @@ class Samaritan(Samaritable):
     def start_polling(self):
         self.updater.start_polling(allowed_updates=[Update.ALL_TYPES, 'chat_member'])
 
-    @log_entexit
-    def add_handles(self, dp):
-        dp.add_handler(MessageHandler(Filters.status_update.new_chat_members |
-                                      Filters.status_update.left_chat_member, self.member_msg))
-        dp.add_handler(ChatMemberHandler(
-            chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
-        dp.add_handler(CommandHandler('leaderboard', self.contestor.leaderboard))
-        dp.add_handler(CommandHandler(['invite', 'contest'], self.inviter.invite))
-        dp.add_handler(CommandHandler('price', self.price))
-        dp.add_handler(CommandHandler('mc', self.mc))
-        dp.add_handler(CommandHandler('start',
-                                      self.challenger.captcha_deeplink,
-                                      Filters.regex(r'captcha_([_a-zA-Z0-9-]*)'),
-                                      pass_args=True))
-        dp.add_handler(CommandHandler('start',
-                                      self.inviter.invite_deeplink,
-                                      Filters.regex(r'invite_([_a-zA-Z0-9-]*)'),
-                                      pass_args=True))
-        dp.add_handler(CallbackQueryHandler(self.challenger.captcha_callback, pattern="completed_([_a-zA-Z0-9-]*)"))
-        self.add_dp_handlers(dp)
-
     @staticmethod
     def get_handler_name(attributes: dict, handler_type=None):
         handler_type = handler_type if handler_type else attributes['type']
         name = f"_handler_{attributes['_id']}_{handler_type}"
         return name
 
-    def _wrap_method(self, method):  # Wrapper called in case of a method
-        @wraps(method)
-        def inner(self_inner, *args, **kwargs):
-            user_id = args[0].effective_user.id  # args[0]: update
-            if user_id not in self.db.get_admins:
-                print(f'Unauthorized access denied on {method.__name__}'
-                      f'for {user_id} : {args[0].message.chat.username}.')
-                args[0].message.reply_text('You do not have the required permissions to access this command')
-                return None  # quit handling command
-            return method(self_inner, *args, **kwargs)
-        return inner
+    @log_entexit
+    def add_handlers(self, dp):
+        dp.add_handler(MessageHandler(Filters.status_update.new_chat_members |
+                                      Filters.status_update.left_chat_member, self.member_msg))
+        dp.add_handler(ChatMemberHandler(
+            chat_member_types=ChatMemberHandler.ANY_CHAT_MEMBER, callback=self.member_updated))
+        self.challenger.add_handlers(dp)
+        self.inviter.add_handlers(dp)
+        self.contestor.add_handlers(dp)
+        self.graphql.add_handlers(dp)
+        self.add_dp_handlers(dp)
 
     def _format_reference(self, update: Update, prev_msg):
         return f"{self.db.get_text_by_handler('too_fast')}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"
