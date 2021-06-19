@@ -40,6 +40,7 @@ CALLBACK_DIVIDER = '_'
 CAPTCHA_CALLBACK_PREFIX = 'completed'
 CAPTCHA_PREFIX = 'captcha'
 INVITE_PREFIX = 'invite'
+LOUNGE_PREFIX = 'lounge'
 
 """Standard member permissions
 """

@@ -10,7 +10,7 @@ from telegram.error import BadRequest
 from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
 
-from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER, INVITE_PREFIX
+from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER, INVITE_PREFIX, LOUNGE_PREFIX
 
 log = logging.getLogger('utils')
 
@@ -223,6 +223,21 @@ def gen_captcha_request_deeplink(up: Update, ctx: CallbackContext):
                f'{CAPTCHA_PREFIX + CALLBACK_DIVIDER}' \
                f'{str(chat_id)}'
     log.debug('Captcha deeplink: %s', deeplink)
+    return deeplink
+
+
+def gen_lounge_request_deeplink(up: Update, ctx: CallbackContext):
+    """Generates a new lounge add bot to group deeplink based on incoming Update and bot.CallbackContext
+    :param up: Incoming telegram.Update
+    :param ctx: CallbackContext for bot
+    :return: Deeplink to add bot to lounge chat
+    """
+    chat_id = up.effective_chat.id if up.effective_chat.id else up.message.chat_id
+
+    deeplink = f'https://t.me/{ctx.bot.username}?startgroup=' \
+               f'{LOUNGE_PREFIX + CALLBACK_DIVIDER}' \
+               f'{str(chat_id)}'
+    log.debug('Lounge deeplink: %s', deeplink)
     return deeplink
 
 
