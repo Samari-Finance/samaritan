@@ -67,6 +67,15 @@ class MongoConn:
     def set_handler_enabled(self, command, on):
         self._upsert_handler(command, 'enabled', on)
 
+    def get_captcha_status(self, chat_id, user_id) -> bool:
+        user_id = int(user_id)
+        try:
+            return self._chat_members(chat_id).find_one({'_id': user_id}).get('captcha_completed', False)
+
+        except (KeyError, AttributeError, TypeError):
+            self.set_captcha_status(user_id=user_id, chat_id=chat_id, status=False)
+            return False
+
     def set_handler_type(self, command: str, handler_type: str):
         self._upsert_handler(command, 'type', handler_type)
 
@@ -78,9 +87,6 @@ class MongoConn:
 
     def _upsert_handler(self, command: str, key: str, value):
         self.handlers.update({'_id': command}, {'$set': {key: value}}, upsert=True)
-
-    def _chat_members(self, chat_id):
-        return self.chat_members_coll[str(chat_id)]
 
     def _init_conn(self, path):
         self.client = MongoClient(path)
@@ -104,14 +110,11 @@ class MongoConn:
                                                    'captcha_completed': status
                                                }}, upsert=True)
 
-    def get_captcha_status(self, chat_id, user_id) -> bool:
-        user_id = int(user_id)
-        try:
-            return self._chat_members(chat_id).find_one({'_id': user_id}).get('captcha_completed', False)
+    def _chat_members(self, chat_id):
+        return self.chat_members_coll[str(chat_id)]
 
-        except (KeyError, AttributeError, TypeError):
-            self.set_captcha_status(user_id=user_id, chat_id=chat_id, status=False)
-            return False
+    def _chat_settings(self, chat_id):
+        return self.chat_settings_coll[str(chat_id)]
 
     def set_private_chat_id(self, chat_id, user_id, priv_chat_id):
         self._chat_members(chat_id).update_one({'_id': int(user_id)},
@@ -122,5 +125,17 @@ class MongoConn:
             return self._chat_members(chat_id).find_one({
                 '_id': int(user_id),
                 'chat_id': {'$exists': True}}).get('chat_id')
+        except (KeyError, AttributeError, TypeError):
+            return None
+
+    def get_lounge_by_chat_id(self, chat_id):
+        try:
+            return self._chat_settings(chat_id).get('lounge_id')
+        except (KeyError, AttributeError, TypeError):
+            return None
+
+    def get_mod_by_chat_id(self, chat_id):
+        try:
+            return self._chat_settings(chat_id).get('mod_id')
         except (KeyError, AttributeError, TypeError):
             return None
