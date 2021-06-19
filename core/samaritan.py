@@ -278,6 +278,7 @@ class Samaritan(Samaritable):
         self.inviter.add_handlers(dp)
         self.contestor.add_handlers(dp)
         self.graphql.add_handlers(dp)
+        self.moderator.add_handlers(dp)
         self.add_dp_handlers(dp)
 
     def _format_reference(self, update: Update, prev_msg):
