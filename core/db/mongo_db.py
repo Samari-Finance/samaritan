@@ -139,3 +139,6 @@ class MongoConn:
             return self._chat_settings(chat_id).get('mod_id')
         except (KeyError, AttributeError, TypeError):
             return None
+
+    def set_lounge_id_by_chat_id(self, chat_id, lounge_id):
+        self._chat_settings(chat_id).update_one({'lounge_id': int(lounge_id)}, upsert=True)
