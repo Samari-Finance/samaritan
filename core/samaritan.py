@@ -1,13 +1,28 @@
-"""
-    Telegram bot for Samari.finance Telegram group using python-telegram-bot
+"""Samaritan
+Copyright (C) 2021 Samari.finance
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---------------------------------------------------------------------
+
+Telegram bot for Samari.finance Telegram group using python-telegram-bot
     @ https://github.com/Samari-Finance/samaritan
     @ https://github.com/python-telegram-bot/python-telegram-bot
 
 """
-
 import logging
 from datetime import datetime
-from typing import Callable, Union
+from typing import Callable
 from telegram import (
     Update,
 )
@@ -28,6 +43,7 @@ from core.captcha.challenger import Challenger
 from core.contest.contestor import Contestor
 from core.contest.inviter import Inviter
 from core.db.mongo_db import MongoConn
+from core.mod.moderator import Moderator
 from core.samaritable import Samaritable
 from core.utils.utils import (
     read_api,
@@ -54,10 +70,10 @@ class Samaritan(Samaritable):
         super().__init__(self.db)
         setup_log(log_level=log_level)
         self.graphql = GraphQLClient(self.db)
-        self.welcome = (Union[int, str], datetime)
         self.challenger = Challenger(self.db)
         self.inviter = Inviter(self.db)
         self.contestor = Contestor(self.db)
+        self.moderator = Moderator(self.db)
         self.add_handlers(self.dispatcher)
 
     def gen_handler_attr(self):
