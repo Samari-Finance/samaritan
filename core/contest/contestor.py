@@ -3,7 +3,8 @@ from telegram.ext import CallbackContext, CommandHandler
 
 from core.db import MongoConn
 from core.samaritable import Samaritable
-from core.utils.utils import log_entexit, fallback_chat_id, fallback_user_id, send_message
+from core.utils.utils import fallback_chat_id, fallback_user_id, send_message
+from test.log.logger import log_entexit
 
 
 class Contestor(Samaritable):

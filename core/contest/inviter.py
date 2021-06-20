@@ -4,8 +4,9 @@ from telegram.ext import CallbackContext, CommandHandler, Filters
 from core import PRIVATE, CALLBACK_DIVIDER
 from core.db import MongoConn
 from core.samaritable import Samaritable
-from core.utils.utils import log_entexit, fallback_user_id, fallback_chat_id, send_message, gen_invite_request_deeplink, \
+from core.utils.utils import fallback_user_id, fallback_chat_id, send_message, gen_invite_request_deeplink, \
     build_menu
+from test.log.logger import log_entexit
 
 
 class Inviter(Samaritable):

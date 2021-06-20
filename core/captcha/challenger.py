@@ -8,9 +8,10 @@ from telegram.ext import CallbackContext, CommandHandler, CallbackQueryHandler, 
 from core import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, MARKDOWN_V2
 from core.captcha.challenge import Challenge
 from core.db import MongoConn
-from core.utils.utils import send_image, send_message, log_curr_captchas, log_entexit, fallback_user_id, \
+from core.utils.utils import send_image, send_message, log_curr_captchas, fallback_user_id, \
     gen_captcha_request_deeplink, build_menu
 from core.samaritable import Samaritable
+from test.log.logger import log_entexit
 
 MAX_ATTEMPTS = 4
 

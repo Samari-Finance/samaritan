@@ -6,7 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 
 from core import CAPTCHA_PREFIX, CAPTCHA_CALLBACK_PREFIX, CALLBACK_DIVIDER
-from core.utils.utils import log_curr_captchas, log_entexit, send_image, build_menu
+from core.utils.utils import send_image, build_menu
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
 fill_color = [(64, 107, 76), (0, 87, 128), (0, 3, 82), (191, 0, 255), (72, 189, 0), (189, 107, 0), (189, 41, 0)]
@@ -116,7 +116,6 @@ class Challenge:
 
         :param up: incoming update
         :param ctx: context for bot
-        :param ch: Challenge to draw
         :param callback: CallbackContext from bot
         :return: Tuple of image and KeyboardMarkup
         """

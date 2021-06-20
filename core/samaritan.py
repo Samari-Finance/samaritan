@@ -33,13 +33,12 @@ from core.utils.utils import (
     read_api,
     send_message,
     regex_req,
-    setup_log,
-    log_entexit,
     fallback_user_id,
     fallback_chat_id,
     fallback_message_id)
 from core.utils.utils_bot import (
     gen_filter)
+from test.log.logger import setup_log, log_entexit
 
 
 class Samaritan(Samaritable):

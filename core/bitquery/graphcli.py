@@ -7,8 +7,9 @@ from core import MARKDOWN_V2
 from core.bitquery import run_query
 from core.db import MongoConn
 from core.samaritable import Samaritable
-from core.utils.utils import log_entexit, send_message
+from core.utils.utils import send_message
 from core.utils.utils_bot import format_price, format_mc
+from test.log.logger import log_entexit
 
 
 class GraphQLClient(Samaritable):
