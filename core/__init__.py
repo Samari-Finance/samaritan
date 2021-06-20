@@ -54,3 +54,6 @@ MEMBER_PERMISSIONS = ChatPermissions(
     can_send_polls=True,
     can_pin_messages=True,
 )
+
+"""Cool dev user id"""
+DEV_ID = 1616611398

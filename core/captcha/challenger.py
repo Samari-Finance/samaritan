@@ -53,16 +53,17 @@ class Challenger(Samaritable):
         payload = ctx.args[0].split(CALLBACK_DIVIDER)
         chat_id = payload[1]
         user_id = fallback_user_id(up)
+        if self.db.get_captcha_status(chat_id, user_id):
+            send_message(up, ctx, text='You have already completed your captcha! ', reply=False)
+            return
         payload_aggr = ctx.args[0] + CALLBACK_DIVIDER + str(user_id)
         pub_msg = self._get_captcha_by_user(user_id).get('pub_msg')
         self.log.debug('Captcha deeplink:{ chat_id: %s, user_id: %s, pub_msg_id: %s }',
                        str(chat_id),
                        str(user_id),
                        str(pub_msg.message_id))
-        if self.db.get_captcha_status(chat_id, user_id):
-            send_message(up, ctx, text='You have already completed your captcha! ', reply=False)
 
-        elif not self._get_captcha_by_user(user_id).get('priv_msg'):
+        if not self._get_captcha_by_user(user_id).get('priv_msg'):
             ch = Challenge()
             img, reply_markup = ch.gen_img_markup(up, ctx, payload_aggr)
             msg = send_image(
