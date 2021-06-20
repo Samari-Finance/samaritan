@@ -1,6 +1,6 @@
 import requests
 
-from core.utils.utils import read_api
+from samaritan.util.pytgbot import read_api
 
 api_key = read_api('bitquery_api')
 

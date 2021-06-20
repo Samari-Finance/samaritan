@@ -1,10 +1,10 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, CommandHandler, Filters
 
-from core import PRIVATE, CALLBACK_DIVIDER
-from core.db import MongoConn
-from core.samaritable import Samaritable
-from core.utils.utils import fallback_user_id, fallback_chat_id, send_message, gen_invite_request_deeplink, \
+from samaritan import PRIVATE, CALLBACK_DIVIDER
+from samaritan.db import MongoConn
+from samaritan.samaritable import Samaritable
+from samaritan.util.pytgbot import fallback_user_id, fallback_chat_id, send_message, gen_invite_request_deeplink, \
     build_menu
 from test.log.logger import log_entexit
 

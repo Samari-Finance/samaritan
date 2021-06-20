@@ -1,9 +1,9 @@
 from telegram import Update
 from telegram.ext import CallbackContext, CommandHandler
 
-from core.db import MongoConn
-from core.samaritable import Samaritable
-from core.utils.utils import fallback_chat_id, fallback_user_id, send_message
+from samaritan.db import MongoConn
+from samaritan.samaritable import Samaritable
+from samaritan.util.pytgbot import fallback_chat_id, fallback_user_id, send_message
 from test.log.logger import log_entexit
 
 

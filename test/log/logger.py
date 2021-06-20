@@ -2,6 +2,16 @@ import logging
 from functools import wraps
 
 
+def aggregate_logger(self):
+    if self.__class__.__name__.lower() == 'samaritable' or self.__class__.__name__.lower() == 'samaritan':
+        name = 'samaritan'
+    else:
+        name = 'samaritan.' + self.__class__.__name__.lower()
+    log = logging.getLogger(self.__name__().lower())
+    log.addFilter(DebugLogFilter())
+    return log
+
+
 def log_entexit(method):
     @wraps(method)
     def _impl(self, *args, **kwargs):
@@ -21,11 +31,13 @@ def setup_log(log_level):
 
 class DebugLogFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
+        print(record.msg)
         if (
-                record.msg.startswith('Exiting: get_updates') or
-                record.msg.startswith('Entering: get_updates') or
-                record.msg.startswith('No new updates found.') or
-                (record.msg.startswith('[]') and len(record.msg) <= 3)
+                record.name.startswith('telegram') & (
+                record.msg.startswith('Exiting: %s') |
+                record.msg.startswith('Entering: %s') |
+                record.msg.startswith('No new updates found') |
+                (record.msg.startswith('[]') & len(record.msg) <= 3))
         ):
             return False
         return True

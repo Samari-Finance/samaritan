@@ -2,7 +2,7 @@ from functools import wraps
 
 from telegram import ChatMember
 
-from core import ADMIN
+from samaritan import ADMIN
 
 
 def only_admins(method):

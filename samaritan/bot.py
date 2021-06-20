@@ -22,21 +22,21 @@ from telegram.ext import (
 from telegram.utils.helpers import (
     DEFAULT_NONE)
 
-from core import *
-from core.bitquery.graphcli import GraphQLClient
-from core.captcha.challenger import Challenger
-from core.contest.contestor import Contestor
-from core.contest.inviter import Inviter
-from core.db.mongo_db import MongoConn
-from core.samaritable import Samaritable
-from core.utils.utils import (
+from samaritan import *
+from samaritan.bitquery.graphcli import GraphQLClient
+from samaritan.captcha.challenger import Challenger
+from samaritan.contest.contestor import Contestor
+from samaritan.contest.inviter import Inviter
+from samaritan.db.mongo_db import MongoConn
+from samaritan.samaritable import Samaritable
+from samaritan.util.pytgbot import (
     read_api,
     send_message,
     regex_req,
     fallback_user_id,
     fallback_chat_id,
     fallback_message_id)
-from core.utils.utils_bot import (
+from samaritan.util.bot import (
     gen_filter)
 from test.log.logger import setup_log, log_entexit
 

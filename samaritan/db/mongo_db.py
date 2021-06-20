@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 
-from core.default_commands import commands
+from samaritan.default_commands import commands
 
 
 class MongoConn:

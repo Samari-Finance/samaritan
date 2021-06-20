@@ -1,6 +1,6 @@
 import logging
 
-from core.samaritan import Samaritan
+from samaritan.bot import Samaritan
 
 if __name__ == '__main__':
     samaritan = Samaritan(log_level=logging.DEBUG,

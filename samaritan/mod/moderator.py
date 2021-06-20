@@ -1,11 +1,11 @@
 from telegram import Update
 from telegram.ext import CallbackContext, CommandHandler, Filters
 
-from core import CALLBACK_DIVIDER
-from core.db import MongoConn
-from core.mod import only_superadmin
-from core.samaritable import Samaritable
-from core.utils.utils import fallback_chat_id
+from samaritan import CALLBACK_DIVIDER
+from samaritan.db import MongoConn
+from samaritan.mod import only_superadmin
+from samaritan.samaritable import Samaritable
+from samaritan.util.pytgbot import fallback_chat_id
 
 
 class Moderator(Samaritable):

@@ -5,8 +5,8 @@ from PIL import Image
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 
-from core import CAPTCHA_PREFIX, CAPTCHA_CALLBACK_PREFIX, CALLBACK_DIVIDER
-from core.utils.utils import send_image, build_menu
+from samaritan import CAPTCHA_PREFIX, CAPTCHA_CALLBACK_PREFIX, CALLBACK_DIVIDER
+from samaritan.util.pytgbot import send_image, build_menu
 
 colors = ["black", "red", "blue", "green", (64, 107, 76), (0, 87, 128), (0, 3, 82)]
 fill_color = [(64, 107, 76), (0, 87, 128), (0, 3, 82), (191, 0, 255), (72, 189, 0), (189, 107, 0), (189, 41, 0)]

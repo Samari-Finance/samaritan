@@ -10,9 +10,9 @@ from telegram.error import BadRequest
 from telegram.ext import CallbackContext
 from telegram.utils.helpers import DEFAULT_NONE
 
-from core import CAPTCHA_PREFIX, CALLBACK_DIVIDER, INVITE_PREFIX, LOUNGE_PREFIX
+from samaritan import CAPTCHA_PREFIX, CALLBACK_DIVIDER, INVITE_PREFIX, LOUNGE_PREFIX
 
-log = logging.getLogger('utils')
+log = logging.getLogger('util')
 
 
 def send_message(up: Update, ctx: CallbackContext,
