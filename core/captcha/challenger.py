@@ -50,7 +50,7 @@ class Challenger(Samaritable):
             ctx=ctx,
             text=self.captcha_text(up),
             reply_markup=reply_markup)
-        if not self.current_captchas.get(up.effective_user.id, None):
+        if not self.current_captchas.get(up.effective_user.id):
             self.current_captchas[fallback_user_id(up)] = {
                 "pub_msg": msg,
                 "attempts": 0}

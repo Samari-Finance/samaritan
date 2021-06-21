@@ -196,5 +196,7 @@ commands = {
                                   '🔒 LIQUIDITY Locked: https://dxsale.app/app/pages/dxlockview?id=0&add\n' 
                                   '✅ VERIFIED CONTRACT: https://bscscan.com/token/0xb255cddf7fbaf1cbcc57d16fe2eaffffdbf5a8be\n\n'
                                  '👇 Return to the group 👇'
-                         }
+                         },
+    "admin_menu": {'text': 'Select option from menu to edit',
+                   'type': 'admin'}
 }

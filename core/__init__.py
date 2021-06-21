@@ -57,6 +57,7 @@ CAPTCHA_CALLBACK_PREFIX = 'completed'
 CAPTCHA_PREFIX = 'captcha'
 INVITE_PREFIX = 'invite'
 LOUNGE_PREFIX = 'lounge'
+ADMIN_PREFIX = 'admin'
 
 """Standard member permissions
 """

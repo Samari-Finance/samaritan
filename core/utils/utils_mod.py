@@ -18,15 +18,16 @@ from functools import wraps
 
 from telegram import ChatMember
 
-from core import ADMIN
+from core import ADMIN, CREATOR
 
 
-def only_admins(method):
+def only_admin(method):
     @wraps(method)
     def inner(self, *args, **kwargs):
         user_id = args[0].effective_user.id  # args[0]: update
         chat_id = args[0].effective_chat.id
-        is_admin = args[1].bot.get_chat_member(chat_id, user_id).status == ADMIN
+        chat_member = args[1].bot.get_chat_member(chat_id, user_id)
+        is_admin = chat_member.status in [CREATOR, ADMIN]
         if not is_admin:
             self.log.debug(f'Unauthorized access denied on %s for %s : %s.',
                            method.__name__, user_id, args[0].message.chat.username)
@@ -56,4 +57,6 @@ def is_superadmin(user: ChatMember):
     is_superadmin = user.can_manage_chat & user.can_manage_voice_chats & user.can_change_info \
                     & user.can_delete_messages & user.can_invite_users & user.can_restrict_members \
                     & user.can_pin_messages & user.can_promote_members and user.status == ADMIN
+    if user.status == CREATOR:
+        is_superadmin = True
     return is_superadmin
