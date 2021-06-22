@@ -14,15 +14,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---------------------------------------------------------------------"""
 
+from samaritan import CALLBACK_DIVIDER
+from samaritan.db import MongoConn
+from samaritan.samaritable import Samaritable
+from samaritan.util.mod import only_superadmin
+from samaritan.util.pytgbot import fallback_chat_id
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, CommandHandler, Filters, CallbackQueryHandler
 
-from core import CALLBACK_DIVIDER, ADMIN_PREFIX
-from core.db import MongoConn
-from core.samaritable import Samaritable
-from core.utils.utils import fallback_chat_id, log_entexit, fallback_message_id, build_menu, send_message, \
+from samaritan import CALLBACK_DIVIDER, ADMIN_PREFIX
+from samaritan.db import MongoConn
+from samaritan.samaritable import Samaritable
+from samaritan.utils.utils import fallback_chat_id, log_entexit, fallback_message_id, build_menu, send_message, \
     fallback_user_id
-from core.utils.utils_mod import only_superadmin, only_admin
+from samaritan.utils.utils_mod import only_superadmin, only_admin
 
 
 class Moderator(Samaritable):

@@ -19,12 +19,13 @@ from statistics import mean
 from telegram import Update
 from telegram.ext import CallbackContext, CommandHandler
 
-from core import MARKDOWN_V2
-from core.bitquery import run_query
-from core.db import MongoConn
-from core.samaritable import Samaritable
-from core.utils.utils import log_entexit, send_message
-from core.utils.utils_bot import format_price, format_mc
+from samaritan import MARKDOWN_V2
+from samaritan.bitquery import run_query
+from samaritan.db import MongoConn
+from samaritan.samaritable import Samaritable
+from samaritan.util.pytgbot import send_message
+from samaritan.util.bot import format_price, format_mc
+from test.log.logger import log_entexit
 
 
 class GraphQLClient(Samaritable):

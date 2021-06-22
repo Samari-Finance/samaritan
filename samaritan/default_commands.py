@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import timedelta
 
-from core import MARKDOWN_V2
+from samaritan import MARKDOWN_V2
 
 shilltg = '🌜 Samari is about to EXPLODE! 🌛\n' \
           'While charity alone is great, development focused on bringing utility will in the long run cause more ' \

@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from pymongo import MongoClient
 
-from core.default_commands import commands
+from samaritan.default_commands import commands
 
 
 class MongoConn:
@@ -158,3 +158,20 @@ class MongoConn:
 
     def set_lounge_id_by_chat_id(self, chat_id, lounge_id):
         self._chat_settings(chat_id).update_one({'lounge_id': int(lounge_id)}, upsert=True)
+
+    def set_captcha_msg_id(self, chat_id, user_id, message_id):
+        self._chat_members(chat_id).update_one({'_id:': int(user_id)},
+                                               {'$set': {'cha_msg_id': message_id}}, upsert=True)
+
+    def get_captcha_msg_id(self, chat_id, user_id):
+        return self._chat_members(chat_id).find_one({'_id': int(user_id),
+                                                     'cha_msg_id': {'$ne': None}})
+
+    def set_user_status(self, chat_id, user_id, status):
+        self._chat_members(chat_id).update_one({'_id': int(user_id)}, {'$set': {'status': status}}, upsert=True)
+
+    def user_not_banned(self, chat_id, user_id):
+        try:
+            return self._chat_members(chat_id).find_one({'_id': user_id})['status']
+        except (KeyError, AttributeError, TypeError):
+            return True

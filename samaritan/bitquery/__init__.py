@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import requests
 
-from core.utils.utils import read_api
+from samaritan.util.pytgbot import read_api
 
 api_key = read_api('bitquery_api')
 
