@@ -3,12 +3,8 @@ from functools import wraps
 
 
 def aggregate_logger(self):
-    if self.__class__.__name__.lower() == 'samaritable' or self.__class__.__name__.lower() == 'samaritan':
-        name = 'samaritan'
-    else:
-        name = 'samaritan.' + self.__class__.__name__.lower()
     log = logging.getLogger(self.__name__().lower())
-    log.addFilter(DebugLogFilter())
+    log.addHandler(logging.StreamHandler())
     return log
 
 
@@ -25,19 +21,20 @@ def log_entexit(method):
 
 
 def setup_log(log_level):
+    tg_log = logging.getLogger('telegram.bot')
     logging.basicConfig(level=log_level,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.getLogger('telegram.bot').addFilter(PyTGBotLogFilter())
 
 
-class DebugLogFilter(logging.Filter):
+class PyTGBotLogFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        print(record.msg)
         if (
-                record.name.startswith('telegram') & (
-                record.msg.startswith('Exiting: %s') |
-                record.msg.startswith('Entering: %s') |
-                record.msg.startswith('No new updates found') |
-                (record.msg.startswith('[]') & len(record.msg) <= 3))
+                record.getMessage().startswith('Exiting: get_updates') |
+                record.getMessage().startswith('Entering: get_updates') |
+                record.getMessage().startswith('No new updates found') |
+                (record.getMessage().startswith('[]') & len(record.getMessage()) <= 3)
         ):
             return False
         return True
+

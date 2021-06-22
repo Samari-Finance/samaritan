@@ -205,6 +205,7 @@ class Samaritan(Samaritable):
     def member_msg(self, up: Update, ctx: CallbackContext):
         ctx.bot.delete_message(fallback_chat_id(up), fallback_message_id(up))
 
+    # noinspection PyUnusedLocal
     @log_entexit
     def left_member(self, up: Update, ctx: CallbackContext):
         chat_id = fallback_chat_id(up)

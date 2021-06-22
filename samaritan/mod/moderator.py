@@ -3,8 +3,8 @@ from telegram.ext import CallbackContext, CommandHandler, Filters
 
 from samaritan import CALLBACK_DIVIDER
 from samaritan.db import MongoConn
-from samaritan.mod import only_superadmin
 from samaritan.samaritable import Samaritable
+from samaritan.util.mod import only_superadmin
 from samaritan.util.pytgbot import fallback_chat_id
 
 

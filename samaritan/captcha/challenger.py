@@ -8,8 +8,9 @@ from telegram.ext import CallbackContext, CommandHandler, CallbackQueryHandler, 
 from samaritan import MEMBER_PERMISSIONS, CALLBACK_DIVIDER, CAPTCHA_CALLBACK_PREFIX, MARKDOWN_V2
 from samaritan.captcha.challenge import Challenge
 from samaritan.db import MongoConn
+from samaritan.util.mod import not_banned
 from samaritan.util.pytgbot import send_image, send_message, log_curr_captchas, fallback_user_id, \
-    gen_captcha_request_deeplink, build_menu
+    gen_captcha_request_deeplink, build_menu, fallback_chat_id
 from samaritan.samaritable import Samaritable
 from test.log.logger import log_entexit
 
@@ -35,11 +36,14 @@ class Challenger(Samaritable):
             ctx=ctx,
             text=self.captcha_text(up),
             reply_markup=reply_markup)
-        if not self.current_captchas.get(up.effective_user.id, None):
+        print(f'user_id: {fallback_user_id(up)}')
+        self.db.set_captcha_msg_id(fallback_chat_id(up), fallback_user_id(up), msg.message_id)
+        if not self.current_captchas.get(fallback_user_id(up), None):
             self.current_captchas[fallback_user_id(up)] = {
                 "pub_msg": msg,
                 "attempts": 0}
 
+    @not_banned
     @log_curr_captchas
     @log_entexit
     def captcha_deeplink(self, up: Update, ctx: CallbackContext) -> None:
@@ -54,15 +58,29 @@ class Challenger(Samaritable):
         payload = ctx.args[0].split(CALLBACK_DIVIDER)
         chat_id = payload[1]
         user_id = fallback_user_id(up)
+        log_str = f'Captcha deeplink payload:{{chat_id: {chat_id}, user_id: {user_id}, pub_msg:'
+
         if self.db.get_captcha_status(chat_id, user_id):
             send_message(up, ctx, text='You have already completed your captcha! ', reply=False)
+            self.log.debug('User %s already completed captcha', str(user_id))
             return
+        if not self._get_captcha_by_user(user_id):
+            self.current_captchas[user_id] = {
+                "attempts": 0
+            }
+
+        # append user_id for Callback queries
         payload_aggr = ctx.args[0] + CALLBACK_DIVIDER + str(user_id)
-        pub_msg = self._get_captcha_by_user(user_id).get('pub_msg')
-        self.log.debug('Captcha deeplink:{ chat_id: %s, user_id: %s, pub_msg_id: %s }',
-                       str(chat_id),
-                       str(user_id),
-                       str(pub_msg.message_id))
+        user_cpcha = self._get_captcha_by_user(user_id)
+        if user_cpcha:
+            pub_msg = user_cpcha.get('pub_msg')
+            log_str += f'{pub_msg}'
+
+        else:
+            pub_msg = None
+            log_str += f'None'
+
+        self.log.debug(log_str)
 
         if not self._get_captcha_by_user(user_id).get('priv_msg'):
             ch = Challenge()
@@ -158,12 +176,14 @@ class Challenger(Samaritable):
         priv_msg = self._get_priv_msg(user_id)
         priv_chat_id = self._get_priv_msg(user_id).chat_id
         pub_msg = self._get_public_msg(user_id)
+        log_str = f'Captcha failed:{{ chat_id: {chat_id}, user_id: {user_id}'
+        if pub_msg:
+            log_str += f', pub_msg_id: {pub_msg.message_id}'
+        if priv_msg:
+            log_str += f', priv_msg_id: {priv_msg.message_id}}}'
+        self.log.debug(log_str)
+
         new_ch = Challenge()
-        self.log.debug('Captcha failed:{ chat_id: %s, user_id: %s, pub_msg_id: %s, priv_msg_id: %s}',
-                       str(chat_id),
-                       str(user_id),
-                       str(pub_msg.message_id),
-                       str(priv_msg.message_id))
 
         self._get_captcha_by_user(user_id)['attempts'] += 1
         img, reply_markup = new_ch.gen_img_markup(
@@ -200,28 +220,35 @@ class Challenger(Samaritable):
         :param payload: passed on data from CallbackQuery
         :return: None
         """
+        bot = ctx.bot
         chat_id = payload[1]
         user_id = payload[2]
         priv_msg = self._get_priv_msg(user_id)
         pub_msg = self._get_public_msg(user_id)
         self.log.debug('Payload: %s', payload)
-        ctx.bot.restrict_chat_member(chat_id, user_id, permissions=MEMBER_PERMISSIONS)
-        ctx.bot.unban_chat_member(chat_id, user_id, only_if_banned=True)
+        bot.restrict_chat_member(chat_id, user_id, permissions=MEMBER_PERMISSIONS)
+        bot.unban_chat_member(chat_id, user_id, only_if_banned=True)
 
         try:
-            ctx.bot.delete_message(
+            bot.delete_message(
                 chat_id=up.effective_chat.id,
                 message_id=priv_msg.message_id)
-            ctx.bot.delete_message(
-                chat_id=chat_id,
-                message_id=pub_msg.message_id
-            )
         except BadRequest:
             self.log.debug(f'Message %s not found in %s with id: %s',
                            str(priv_msg.message_id),
-                           ctx.bot.get_chat(chat_id).full_name,
+                           bot.get_chat(chat_id).full_name,
                            str(chat_id))
-        url = ctx.bot.get_chat(chat_id).invite_link
+        if pub_msg:
+            try:
+                bot.delete_message(
+                    chat_id=chat_id,
+                    message_id=pub_msg.message_id
+                )
+            except BadRequest:
+                self.log.debug('Message %s too old, or not present in %s',
+                               str(priv_msg.message_id),
+                               str(bot.get_chat(chat_id).full_name))
+        url = bot.get_chat(chat_id).invite_link
         kb_markup = InlineKeyboardMarkup([[InlineKeyboardButton(
             text='Return to Samari.finance',
             url=url)]])
@@ -244,11 +271,11 @@ class Challenger(Samaritable):
                            priv_chat_id: Union[str, int],
                            user_id: Union[str, int],
                            priv_msg: Message,
-                           pub_msg: Message) -> None:
+                           pub_msg: int) -> None:
         def once(ctx: CallbackContext):
             if not self.db.get_captcha_status(chat_id, user_id):
                 for element in [chat_id, priv_chat_id, user_id, priv_chat_id, user_id, priv_msg.message_id,
-                                pub_msg.message_id]:
+                                pub_msg]:
                     if isinstance(element, int):
                         str(element)
                     self.kick_and_restrict(up, ctx, chat_id, user_id, pub_msg, priv_msg, priv_chat_id)
@@ -261,18 +288,23 @@ class Challenger(Samaritable):
             ctx.bot.restrict_chat_member(chat_id, user_id, permissions=MEMBER_PERMISSIONS)
             ctx.bot.unban_chat_member(chat_id=chat_id, user_id=user_id, only_if_banned=True)
             self.db.set_captcha_status(chat_id, user_id, False)
+            self.db.set_user_status(chat_id, user_id, True)
         return unban_in
 
     @log_entexit
     def kick_and_restrict(self, up, ctx: CallbackContext, chat_id, user_id, pub_msg, priv_msg, priv_chat_id,):
         def inner(ctx: CallbackContext):
-            self.log.debug('Kicking %s from %s, and deleting %s from %s and %s from %s',
-                           user_id, chat_id, pub_msg.message_id, chat_id, priv_msg.message_id, priv_chat_id)
+            log_str = f'Kicking {user_id} from {chat_id}'
+            if priv_msg and priv_chat_id:
+                log_str += f', and deleting {priv_msg.message_id} from {priv_chat_id}'
+            self.log.debug(log_str)
             ctx.bot.kick_chat_member(chat_id=chat_id, user_id=user_id)
-            ctx.bot.delete_message(chat_id=chat_id, message_id=pub_msg.message_id)
+            if pub_msg and self.db.get_captcha_msg_id(chat_id, user_id):
+                ctx.bot.delete_message(chat_id=chat_id, message_id=pub_msg.message_id)
             ctx.bot.delete_message(chat_id=priv_chat_id, message_id=priv_msg.message_id)
             self.db.remove_ref(chat_id=chat_id, user_id=user_id)
             self.db.set_captcha_status(chat_id=chat_id, user_id=user_id, status=False)
+            self.db.set_user_status(chat_id=chat_id, user_id=user_id, status=False)
             ctx.job_queue.run_once(callback=self.unban(ctx, chat_id, user_id), when=timedelta(seconds=7200))
             self.current_captchas.pop(chat_id, user_id)
             send_message(up, ctx,
@@ -283,9 +315,11 @@ class Challenger(Samaritable):
                          reply=False)
         return inner
 
+    @log_entexit
+    @log_curr_captchas
     def extend_captcha_caption(self, user_id):
         caption = str(self.db.get_text_by_handler('captcha_challenge'))
-        current_user = self.current_captchas.get(user_id, None)
+        current_user = self._get_captcha_by_user(user_id)
         if not current_user:
             attempts_left = MAX_ATTEMPTS
         else:
@@ -311,8 +345,10 @@ class Challenger(Samaritable):
         return self.current_captchas.get(int(user_id)).get('priv_msg')
 
     @log_entexit
-    def _get_public_msg(self, user_id: Union[str, int]) -> Message:
-        return self.current_captchas.get(int(user_id)).get('pub_msg')
+    def _get_public_msg(self, user_id: Union[str, int]):
+        if self.current_captchas.get(int(user_id)):
+            return self.current_captchas.get(int(user_id)).get('pub_msg')
+        return None
 
     @log_entexit
     def _get_captcha_by_user(self, user_id):
