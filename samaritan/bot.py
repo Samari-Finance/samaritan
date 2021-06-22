@@ -21,7 +21,7 @@ Telegram bot for Samari.finance Telegram group using python-telegram-bot
 """
 import logging
 from datetime import datetime
-from typing import Callable
+from typing import Callable, Union
 from telegram import (
     Update,
 )
@@ -43,13 +43,11 @@ from samaritan.contest.contestor import Contestor
 from samaritan.contest.inviter import Inviter
 from samaritan.db.mongo_db import MongoConn
 from samaritan.samaritable import Samaritable
-from samaritan.mod.moderator import import Moderator
+from samaritan.mod.moderator import Moderator
 from samaritan.util.pytgbot import (
     read_api,
     send_message,
     regex_req,
-    setup_log,
-    log_entexit,
     fallback_user_id,
     fallback_chat_id,
     fallback_message_id)

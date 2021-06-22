@@ -18,16 +18,15 @@ from samaritan import CALLBACK_DIVIDER
 from samaritan.db import MongoConn
 from samaritan.samaritable import Samaritable
 from samaritan.util.mod import only_superadmin
-from samaritan.util.pytgbot import fallback_chat_id
+from samaritan.util.pytgbot import fallback_chat_id, send_message, fallback_user_id, build_menu, fallback_message_id
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, CommandHandler, Filters, CallbackQueryHandler
 
 from samaritan import CALLBACK_DIVIDER, ADMIN_PREFIX
 from samaritan.db import MongoConn
 from samaritan.samaritable import Samaritable
-from samaritan.utils.utils import fallback_chat_id, log_entexit, fallback_message_id, build_menu, send_message, \
-    fallback_user_id
-from samaritan.utils.utils_mod import only_superadmin, only_admin
+from samaritan.util.mod import only_superadmin, only_admin
+from test.log.logger import log_entexit
 
 
 class Moderator(Samaritable):
