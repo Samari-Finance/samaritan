@@ -21,3 +21,4 @@
 api_key
 bitquery_api
 mongo_api
+logs/

@@ -13,11 +13,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---------------------------------------------------------------------"""
-
-from samaritan import CALLBACK_DIVIDER
-from samaritan.db import MongoConn
-from samaritan.samaritable import Samaritable
-from samaritan.util.mod import only_superadmin
 from samaritan.util.pytgbot import fallback_chat_id, send_message, fallback_user_id, build_menu, fallback_message_id
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, CommandHandler, Filters, CallbackQueryHandler
@@ -65,7 +60,7 @@ class Moderator(Samaritable):
     def menu_callback(self, up: Update, ctx: CallbackContext):
         payload = up.callback_query.data.split(CALLBACK_DIVIDER)
         payload.pop(0)
-        return getattr(self, payload[0]+'_callback')(payload)
+        return getattr(self, payload[0]+'_callback')(up, ctx, payload)
 
     @only_admin
     @log_entexit

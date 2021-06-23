@@ -25,14 +25,19 @@ from samaritan.util.pytgbot import fallback_user_id, fallback_chat_id
 def only_admin(method):
     @wraps(method)
     def inner(self, *args, **kwargs):
-        user_id = args[0].effective_user.id  # args[0]: update
+        # args[0]: update
+        # args[1]: context
+        user_id = args[0].effective_user.id
         chat_id = args[0].effective_chat.id
         chat_member = args[1].bot.get_chat_member(chat_id, user_id)
         is_admin = chat_member.status in [CREATOR, ADMIN]
         if not is_admin:
             self.log.debug(f'Unauthorized access denied on %s for %s : %s.',
-                           method.__name__, user_id, args[0].message.chat.username)
-            args[0].message.reply_text('You do not have the required permissions to access this command')
+                           method.__name__, user_id, args[1].bot.get_chat(chat_id))
+            if args[0].callback_query:
+                args[0].callback_query.answer('You do not have the required permissions to access this command')
+            elif args[0].message:
+                args[0].message.reply_text('You do not have the required permissions to access this command')
             return None  # quit handling command
         return method(self, *args, **kwargs)
     return inner
@@ -42,13 +47,17 @@ def only_superadmin(method):
     @wraps(method)
     def inner(self, *args, **kwargs):
         # args[0]: update
+        # args[1]: context
         user_id = args[0].effective_user.id  # args[0]: update
         chat_id = args[0].effective_chat.id
         user = args[1].bot.get_chat_member(chat_id, user_id)
         if not is_superadmin(user):
             self.log.debug(f'Unauthorized access denied on %s for %s : %s.',
-                           method.__name__, user_id, args[0].message.chat.username)
-            args[0].message.reply_text('You do not have the required permissions to access this command')
+                           method.__name__, user_id, args[1].bot.get_chat(chat_id))
+            if args[0].callback_query:
+                args[0].callback_query.answer('You do not have the required permissions to access this command')
+            elif args[0].message:
+                args[0].message.reply_text('You do not have the required permissions to access this command')
             return None  # quit handling command
         return method(self, *args, **kwargs)
     return inner

@@ -31,7 +31,7 @@ from telegram.ext import (
     CallbackContext,
     ChatMemberHandler,
     MessageHandler,
-    Filters,
+    Filters, Dispatcher,
 )
 from telegram.utils.helpers import (
     DEFAULT_NONE)
@@ -269,8 +269,13 @@ class Samaritan(Samaritable):
         name = f"_handler_{attributes['_id']}_{handler_type}"
         return name
 
+    def raise_to_dev(self, up: object, ctx: CallbackContext):
+        file = open('logs/samalog_', 'rb')
+        self.log.exception(ctx.error, stack_info=True)
+        ctx.bot.send_document(chat_id=DEV_ID, document=file)
+
     @log_entexit
-    def add_handlers(self, dp):
+    def add_handlers(self, dp: Dispatcher):
         dp.add_handler(MessageHandler(Filters.status_update.new_chat_members |
                                       Filters.status_update.left_chat_member, self.member_msg))
         dp.add_handler(ChatMemberHandler(
@@ -281,6 +286,8 @@ class Samaritan(Samaritable):
         self.graphql.add_handlers(dp)
         self.moderator.add_handlers(dp)
         self.add_dp_handlers(dp)
+        dp.add_error_handler(callback=self.raise_to_dev)
+
 
     def _format_reference(self, update: Update, prev_msg):
         return f"{self.db.get_text_by_handler('too_fast')}/{str(update.message.chat_id)[4:]}/{str(prev_msg)})"

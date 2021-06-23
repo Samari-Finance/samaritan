@@ -1,10 +1,12 @@
+import errno
 import logging
+import os
 from functools import wraps
+from logging.handlers import TimedRotatingFileHandler
 
 
 def aggregate_logger(self):
     log = logging.getLogger(self.__name__().lower())
-    log.addHandler(logging.StreamHandler())
     return log
 
 
@@ -21,9 +23,17 @@ def log_entexit(method):
 
 
 def setup_log(log_level):
-    tg_log = logging.getLogger('telegram.bot')
     logging.basicConfig(level=log_level,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    try:
+        os.makedirs('logs')
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+    logger_file = TimedRotatingFileHandler('logs/sama.log', when='midnight', interval=1)
+    logger_file.setLevel(logging.DEBUG)
+    logger_file.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logging.getLogger().addHandler(logger_file)
     logging.getLogger('telegram.bot').addFilter(PyTGBotLogFilter())
 
 

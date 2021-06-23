@@ -119,7 +119,7 @@ class Challenger(Samaritable):
                                     chat_id=chat_id,
                                     priv_chat_id=msg.chat_id,
                                     user_id=user_id,
-                                    pub_msg=pub_msg,
+                                    pub_msg_id=pub_msg,
                                     priv_msg=msg)
         else:
             ch = self._get_captcha_by_user(user_id)['ch']
@@ -242,8 +242,14 @@ class Challenger(Samaritable):
         priv_msg = self._get_priv_msg(user_id)
         pub_msg = self._get_public_msg(user_id)
         self.log.debug('Payload: %s', payload)
-        bot.restrict_chat_member(chat_id, user_id, permissions=MEMBER_PERMISSIONS)
-        bot.unban_chat_member(chat_id, user_id, only_if_banned=True)
+        up.c
+
+        try:
+            bot.restrict_chat_member(chat_id, user_id, permissions=MEMBER_PERMISSIONS)
+            bot.unban_chat_member(chat_id, user_id, only_if_banned=True)
+        except BadRequest as e:
+            if e.message.find("Can't remove chat owner") <= 0:
+                raise e
 
         try:
             bot.delete_message(
@@ -287,14 +293,14 @@ class Challenger(Samaritable):
                            priv_chat_id: Union[str, int],
                            user_id: Union[str, int],
                            priv_msg: Message,
-                           pub_msg: int) -> None:
+                           pub_msg_id: int) -> None:
         def once(ctx: CallbackContext):
             if not self.db.get_captcha_status(chat_id, user_id):
                 for element in [chat_id, priv_chat_id, user_id, priv_chat_id, user_id, priv_msg.message_id,
-                                pub_msg]:
-                    if isinstance(element, int):
-                        str(element)
-                    self.kick_and_restrict(up, ctx, chat_id, user_id, pub_msg, priv_msg, priv_chat_id)
+                                pub_msg_id]:
+                    if isinstance(element, str):
+                        int(element)
+                    self.kick_and_restrict(up, ctx, chat_id, user_id, pub_msg_id, priv_msg, priv_chat_id)
 
         ctx.job_queue.run_once(callback=once, when=timedelta(seconds=120))
 
@@ -308,15 +314,22 @@ class Challenger(Samaritable):
         return unban_in
 
     @log_entexit
-    def kick_and_restrict(self, up, ctx: CallbackContext, chat_id, user_id, pub_msg, priv_msg, priv_chat_id,):
+    def kick_and_restrict(self,
+                          up: Update,
+                          ctx: CallbackContext,
+                          chat_id: int,
+                          user_id: int,
+                          pub_msg_id: int,
+                          priv_msg: Message,
+                          priv_chat_id: int):
         def inner(ctx: CallbackContext):
             log_str = f'Kicking {user_id} from {chat_id}'
             if priv_msg and priv_chat_id:
                 log_str += f', and deleting {priv_msg.message_id} from {priv_chat_id}'
             self.log.debug(log_str)
             ctx.bot.kick_chat_member(chat_id=chat_id, user_id=user_id)
-            if pub_msg and self.db.get_captcha_msg_id(chat_id, user_id):
-                ctx.bot.delete_message(chat_id=chat_id, message_id=pub_msg.message_id)
+            if pub_msg_id and self.db.get_captcha_msg_id(chat_id, user_id):
+                ctx.bot.delete_message(chat_id=chat_id, message_id=pub_msg_id)
             ctx.bot.delete_message(chat_id=priv_chat_id, message_id=priv_msg.message_id)
             self.db.remove_ref(chat_id=chat_id, user_id=user_id)
             self.db.set_captcha_status(chat_id=chat_id, user_id=user_id, status=False)
@@ -325,9 +338,8 @@ class Challenger(Samaritable):
             self.current_captchas.pop(chat_id, user_id)
             send_message(up, ctx,
                          chat_id=priv_chat_id,
-                         text=f'Captcha failed. \nYou have been banned from '
-                              f'{ctx.bot.get_chat(chat_id).full_name} for 2hrs.',
-                         parse_mode=MARKDOWN_V2,
+                         text=f'Captcha failed. You have been banned from '
+                              f'{ctx.bot.get_chat(int(chat_id)).full_name} for 2hrs.',
                          reply=False)
         return inner
 

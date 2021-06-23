@@ -175,3 +175,4 @@ class MongoConn:
             return self._chat_members(chat_id).find_one({'_id': user_id})['status']
         except (KeyError, AttributeError, TypeError):
             return True
+
