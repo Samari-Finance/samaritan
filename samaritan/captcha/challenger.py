@@ -242,7 +242,6 @@ class Challenger(Samaritable):
         priv_msg = self._get_priv_msg(user_id)
         pub_msg = self._get_public_msg(user_id)
         self.log.debug('Payload: %s', payload)
-        up.c
 
         try:
             bot.restrict_chat_member(chat_id, user_id, permissions=MEMBER_PERMISSIONS)
