@@ -97,7 +97,7 @@ class Moderator(Samaritable):
         return self.current_mods.get(int(user_id))
 
     @log_entexit
-    def _build_callback_markup(self, callback: str, options: list, n_cols=1):
+    def _build_callback_markup(self, callback: str, options: [str], n_cols=1):
         button_list = [InlineKeyboardButton(
             text=option,
             callback_data=callback + CALLBACK_DIVIDER + option) for option in options]

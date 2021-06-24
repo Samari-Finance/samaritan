@@ -270,7 +270,7 @@ class Samaritan(Samaritable):
         return name
 
     def raise_to_dev(self, up: object, ctx: CallbackContext):
-        file = open('logs/samalog_', 'rb')
+        file = open('logs/sama.log', 'rb')
         self.log.exception(ctx.error, stack_info=True)
         ctx.bot.send_document(chat_id=DEV_ID, document=file)
 
